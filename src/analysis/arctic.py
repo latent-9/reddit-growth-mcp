@@ -31,24 +31,35 @@ class ArcticUnavailable(Exception):
     """Raised when the Arctic Shift service can't be reached or errored."""
 
 
-def _get(path: str, params: Dict[str, Any], timeout: int = 20) -> Dict[str, Any]:
+def _get(path: str, params: Dict[str, Any], timeout: int = 20,
+         retries: int = 2, backoff: float = 1.5) -> Dict[str, Any]:
     query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
     url = f"{ARCTIC_BASE}{path}?{query}"
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.load(resp)
-    except urllib.error.HTTPError as e:
-        # Arctic returns 422 with {"error": "Timeout. Maybe slow down a bit"}
-        # when rate-limited; surface that message so callers can back off.
-        detail = ""
+
+    last_err = None
+    for attempt in range(retries + 1):
         try:
-            detail = json.loads(e.read().decode()).get("error", "")
-        except Exception:
-            pass
-        raise ArcticUnavailable(f"Arctic HTTP {e.code}: {detail}".strip()) from e
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
-        raise ArcticUnavailable(f"Arctic request failed: {e}") from e
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.load(resp)
+        except urllib.error.HTTPError as e:
+            # Arctic returns 422/429 with {"error": "Timeout. Maybe slow down"}
+            # when rate-limited — those are worth retrying with backoff.
+            detail = ""
+            try:
+                detail = json.loads(e.read().decode()).get("error", "")
+            except Exception:
+                pass
+            last_err = ArcticUnavailable(f"Arctic HTTP {e.code}: {detail}".strip())
+            retryable = e.code in (422, 429, 500, 502, 503) or "timeout" in detail.lower()
+            if not retryable or attempt == retries:
+                raise last_err from e
+        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError) as e:
+            last_err = ArcticUnavailable(f"Arctic request failed: {e}")
+            if attempt == retries:
+                raise last_err from e
+        time.sleep(backoff * (attempt + 1))
+    raise last_err  # pragma: no cover
 
 
 def fetch_recent_posts(

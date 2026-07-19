@@ -15,11 +15,9 @@ from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
 
 from .helpers import (
     clean_subreddit_name, submission_to_features, features_from_arctic,
-    safe_mean, winning_keywords,
+    safe_mean, winning_keywords, percentile,
 )
 from . import arctic
-
-_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 # time_filter -> Arctic lookback window for the archive source.
 _ARCHIVE_WINDOW = {"day": "7d", "week": "21d", "month": "60d", "year": "365d", "all": "365d"}
@@ -137,6 +135,7 @@ def analyze_post_patterns(
         "sampled": len(rows),
         "source": source_label,
         "score_stats": {"avg": safe_mean(scores), "max": max(scores), "median": sorted(scores)[len(scores)//2]},
+        "score_percentiles": {q: percentile(sorted(scores), q) for q in (25, 50, 75, 90, 95)},
         "best_posting_hours_utc": best_hours,
         "best_posting_days": best_days,
         "score_by_media_type": _avg_score_by(rows, "media_type"),

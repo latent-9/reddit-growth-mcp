@@ -11,6 +11,8 @@ from src.analysis.helpers import (
     submission_to_features,
     features_from_arctic,
     winning_keywords,
+    percentile,
+    rank_percentile,
 )
 
 
@@ -107,3 +109,18 @@ def test_winning_keywords():
 
 def test_winning_keywords_small_sample_returns_empty():
     assert winning_keywords([{"title": "hi", "score": 1}]) == []
+
+
+def test_percentile():
+    vals = [0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
+    assert percentile(vals, 50) == 50.0
+    assert percentile(vals, 0) == 0.0
+    assert percentile(vals, 100) == 100.0
+    assert percentile([], 50) == 0.0
+
+
+def test_rank_percentile():
+    vals = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    assert rank_percentile(vals, 1) == 0      # nothing below the minimum
+    assert rank_percentile(vals, 6) == 50     # half below
+    assert rank_percentile(vals, 100) == 100  # everything below

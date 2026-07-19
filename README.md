@@ -13,7 +13,7 @@ right high-traffic communities and post content that fits.
 | `analyze_acceptance` | Will my post survive here? (real removal rate + what gets nuked; rules/gates when creds present) |
 | `analyze_post_patterns` | What makes posts perform? (timing, title style, media, flair, winning keywords) |
 | `compare_subreddits` | Which of these subs gives the best shot? (reach vs removal risk) |
-| `evaluate_draft` | Score a specific draft for acceptance risk + engagement |
+| `evaluate_draft` | Predict a draft's performance (0–100) + acceptance risk, with drivers & fixes |
 | `fetch_posts` · `fetch_multiple` · `search_subreddit` · `fetch_comments` | Raw data access |
 
 Works for any community with real activity — not just AI. Tested on tech subs

@@ -122,19 +122,26 @@ def _print_draft(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
     _hr(f"DRAFT EVALUATION · r/{d['subreddit']}")
-    print(f"Verdict: {d['acceptance_verdict']}  ·  engagement score {d['engagement_score']}/100")
+    print(f"Acceptance: {d['acceptance_verdict']} (strictness {d.get('subreddit_strictness')}, "
+          f"removal {d.get('removal_rate_estimate', 0):.0%})")
+    print(f"Performance: {d['performance_score']}/100 [{d['performance_band']}]  ·  "
+          f"projected score ~{d['projected_score']} (sub avg {d['baseline_avg_score']})")
     if d.get("blocking_issues"):
-        _hr("Blocking issues")
+        _hr("Blocking issues (likely removal)")
         for i in d["blocking_issues"]:
             print(f"  ✗ {i}")
     if d.get("warnings"):
         _hr("Warnings")
         for w in d["warnings"]:
             print(f"  ! {w}")
-    if d.get("engagement_notes"):
-        _hr("Engagement notes")
-        for n in d["engagement_notes"]:
-            print(f"  • {n}")
+    if d.get("score_drivers"):
+        _hr("Score drivers")
+        for dr in d["score_drivers"]:
+            print(f"  {dr['impact']:>16}  {dr['factor']}")
+    if d.get("suggestions"):
+        _hr("Suggestions to improve")
+        for s in d["suggestions"]:
+            print(f"  • {s}")
 
 
 def main(argv=None) -> int:

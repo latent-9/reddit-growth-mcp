@@ -175,6 +175,28 @@ def safe_mean(values: List[float]) -> float:
     return round(sum(values) / len(values), 2) if values else 0.0
 
 
+def percentile(sorted_values: List[float], q: float) -> float:
+    """Linear-interpolated percentile (q in 0..100) of a pre-sorted list."""
+    if not sorted_values:
+        return 0.0
+    if len(sorted_values) == 1:
+        return float(sorted_values[0])
+    pos = (q / 100.0) * (len(sorted_values) - 1)
+    lo = int(pos)
+    frac = pos - lo
+    if lo + 1 >= len(sorted_values):
+        return float(sorted_values[-1])
+    return round(sorted_values[lo] + frac * (sorted_values[lo + 1] - sorted_values[lo]), 1)
+
+
+def rank_percentile(sorted_values: List[float], value: float) -> int:
+    """Where `value` falls within `sorted_values`, as a 0..100 percentile."""
+    if not sorted_values:
+        return 0
+    below = sum(1 for v in sorted_values if v < value)
+    return int(round(100 * below / len(sorted_values)))
+
+
 _STOPWORDS = set(
     "the a an and or but of to in for on with is are was were be been being this "
     "that these those it its as at by from up down out so if then than too very can "
