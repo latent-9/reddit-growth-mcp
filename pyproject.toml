@@ -1,11 +1,11 @@
 [project]
-name = "reddit-research-mcp"
-version = "1.0.1"
-description = "A minimal Model Context Protocol server for Reddit content access"
+name = "reddit-analyzer"
+version = "0.1.0"
+description = "Subreddit traffic and post-pattern analysis toolkit"
 readme = "README.md"
 requires-python = ">=3.11"
 authors = [
-  { name="King of the Grackles", email="chris@ivester.ai" },
+  { name="latent-9", email="latentofmythos@gmail.com" },
 ]
 license = {text = "MIT"}
 classifiers = [
@@ -32,10 +32,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/king-of-the-grackles/reddit-research-mcp"
-Repository = "https://github.com/king-of-the-grackles/reddit-research-mcp"
-Issues = "https://github.com/king-of-the-grackles/reddit-research-mcp/issues"
-Documentation = "https://github.com/king-of-the-grackles/reddit-research-mcp#readme"
+Homepage = "https://github.com/latent-9/reddit-analyzer"
+Repository = "https://github.com/latent-9/reddit-analyzer"
+Issues = "https://github.com/latent-9/reddit-analyzer/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -45,7 +44,7 @@ dev = [
 ]
 
 [project.scripts]
-reddit-mcp = "src.server:main"
+reddit-analyzer = "src.server:main"
 
 [build-system]
 requires = ["hatchling"]

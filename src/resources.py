@@ -225,8 +225,8 @@ def register_resources(mcp, reddit: praw.Reddit) -> None:
                 "capabilities": "Search, browse, and read public content"
             },
             "support": {
-                "repository": "https://github.com/king-of-the-grackles/reddit-research-mcp",
-                "issues": "https://github.com/king-of-the-grackles/reddit-research-mcp/issues",
-                "documentation": "See README.md and specs/ directory for architecture details"
+                "repository": "https://github.com/latent-9/reddit-analyzer",
+                "issues": "https://github.com/latent-9/reddit-analyzer/issues",
+                "documentation": "See README.md for details"
             }
         }
