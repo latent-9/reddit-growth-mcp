@@ -44,6 +44,12 @@ All traffic figures are estimates (Reddit hides true visitor counts publicly).
 # Reddit client is initialized at startup and shared across tools.
 reddit = None
 
+_NO_CREDS = {
+    "error": "Reddit credentials not configured",
+    "hint": "Set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env. "
+            "Tip: analyze_post_patterns works without creds via source='archive'.",
+}
+
 
 def initialize_reddit_client():
     global reddit
@@ -71,6 +77,8 @@ def find_target_subreddits_tool(
     include_nsfw: Annotated[bool, "Include NSFW subreddits"] = False,
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return find_target_subreddits(
         topics, reddit, limit_per_topic, min_subscribers,
         min_daily_visitors, include_nsfw, ctx,
@@ -86,6 +94,8 @@ def analyze_subreddit(
     sample_size: Annotated[int, "Recent posts to sample for velocity"] = 50,
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return estimate_subreddit_traffic(subreddit_name, reddit, sample_size, ctx)
 
 
@@ -100,6 +110,8 @@ def analyze_acceptance(
     archive_window: Annotated[str, "Archive lookback window, e.g. 7d/14d/1month"] = "14d",
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return _analyze_acceptance(subreddit_name, reddit, sample_size, use_archive, archive_window, ctx)
 
 
@@ -112,9 +124,10 @@ def analyze_post_patterns(
     listing_type: Annotated[str, "top | hot | new"] = "top",
     time_filter: Annotated[str, "all|year|month|week|day (for 'top')"] = "month",
     limit: Annotated[int, "Posts to sample"] = 100,
+    source: Annotated[str, "auto | reddit | archive (archive needs no Reddit creds)"] = "auto",
     ctx: Context = None,
 ) -> Dict[str, Any]:
-    return _analyze_post_patterns(subreddit_name, reddit, listing_type, time_filter, limit, ctx)
+    return _analyze_post_patterns(subreddit_name, reddit, listing_type, time_filter, limit, source, ctx)
 
 
 @mcp.tool(
@@ -130,6 +143,8 @@ def evaluate_draft(
     time_filter: Annotated[str, "Pattern window: all|year|month|week"] = "month",
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return _evaluate_draft(subreddit_name, title, reddit, body, post_type, flair, time_filter, ctx)
 
 
@@ -143,6 +158,8 @@ def fetch_posts(
     limit: Annotated[int, "Number of posts"] = 10,
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return fetch_subreddit_posts(subreddit_name, reddit, listing_type, time_filter, limit, ctx)
 
 
@@ -154,6 +171,8 @@ async def fetch_multiple(
     limit_per_subreddit: Annotated[int, "Posts per subreddit"] = 5,
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return await fetch_multiple_subreddits(
         subreddit_names, reddit, listing_type, time_filter, limit_per_subreddit, ctx)
 
@@ -167,6 +186,8 @@ def search_subreddit(
     limit: Annotated[int, "Max results"] = 10,
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return search_in_subreddit(subreddit_name, query, reddit, sort, time_filter, limit, ctx)
 
 
@@ -178,6 +199,8 @@ async def fetch_comments(
     comment_sort: Annotated[str, "best|top|new"] = "best",
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    if reddit is None:
+        return _NO_CREDS
     return await fetch_submission_with_comments(
         reddit, submission_id, url, comment_limit, comment_sort, ctx)
 

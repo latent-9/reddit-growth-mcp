@@ -13,9 +13,30 @@ from typing import Any, Dict, List
 import praw
 from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
 
-from .helpers import clean_subreddit_name, submission_to_features, safe_mean, top_counter
+from .helpers import (
+    clean_subreddit_name, submission_to_features, features_from_arctic,
+    safe_mean, top_counter,
+)
+from . import arctic
 
 _WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+
+# time_filter -> Arctic lookback window for the archive source.
+_ARCHIVE_WINDOW = {"day": "7d", "week": "21d", "month": "60d", "year": "365d", "all": "365d"}
+
+
+def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str, Any]]:
+    """Pattern rows from the Arctic archive (no Reddit creds needed).
+
+    Excludes the last ~2 days so scores are settled, then keeps the
+    highest-scoring posts to mirror a 'top' listing.
+    """
+    window = _ARCHIVE_WINDOW.get(time_filter, "60d")
+    posts = arctic.fetch_recent_posts(name, after=window, before="2d",
+                                      limit=min(limit, 100), sort="desc")
+    rows = [features_from_arctic(p) for p in posts if not p.get("stickied")]
+    rows.sort(key=lambda r: r["score"], reverse=True)
+    return rows
 
 
 def _avg_score_by(rows: List[Dict[str, Any]], key: str) -> List[Dict[str, Any]]:
@@ -42,29 +63,45 @@ def _bool_lift(rows: List[Dict[str, Any]], key: str) -> Dict[str, Any]:
 
 def analyze_post_patterns(
     subreddit_name: str,
-    reddit: praw.Reddit,
+    reddit: praw.Reddit = None,
     listing_type: str = "top",
     time_filter: str = "month",
     limit: int = 100,
+    source: str = "auto",
     ctx: Any = None,
 ) -> Dict[str, Any]:
-    """Find what makes top posts perform in a given subreddit."""
+    """Find what makes top posts perform in a given subreddit.
+
+    source: 'auto' uses Reddit when available, else the Arctic archive;
+    'reddit' forces PRAW; 'archive' forces Arctic (no creds needed).
+    """
     name = clean_subreddit_name(subreddit_name)
-    try:
-        sub = reddit.subreddit(name)
-        if listing_type == "top":
-            listing = sub.top(time_filter=time_filter, limit=limit)
-        elif listing_type == "hot":
-            listing = sub.hot(limit=limit)
-        else:
-            listing = sub.new(limit=limit)
-        rows = [submission_to_features(p) for p in listing if not p.stickied]
-    except NotFound:
-        return {"error": f"Subreddit r/{name} not found", "status_code": 404}
-    except Forbidden:
-        return {"error": f"r/{name} is private or banned", "status_code": 403}
-    except (TooManyRequests, ResponseException) as e:
-        return {"error": f"Reddit API error: {e}"}
+    use_archive = source == "archive" or (source == "auto" and reddit is None)
+
+    if use_archive:
+        try:
+            rows = _rows_from_archive(name, time_filter, limit)
+            source_label = f"archive/{_ARCHIVE_WINDOW.get(time_filter, '60d')}"
+        except arctic.ArcticUnavailable as e:
+            return {"error": f"Archive unavailable: {e}", "subreddit": name,
+                    "hint": "Add Reddit credentials to use the live source."}
+    else:
+        try:
+            sub = reddit.subreddit(name)
+            if listing_type == "top":
+                listing = sub.top(time_filter=time_filter, limit=limit)
+            elif listing_type == "hot":
+                listing = sub.hot(limit=limit)
+            else:
+                listing = sub.new(limit=limit)
+            rows = [submission_to_features(p) for p in listing if not p.stickied]
+            source_label = f"{listing_type}/{time_filter if listing_type == 'top' else ''}".rstrip("/")
+        except NotFound:
+            return {"error": f"Subreddit r/{name} not found", "status_code": 404}
+        except Forbidden:
+            return {"error": f"r/{name} is private or banned", "status_code": 403}
+        except (TooManyRequests, ResponseException) as e:
+            return {"error": f"Reddit API error: {e}"}
 
     if not rows:
         return {"error": "No posts sampled", "subreddit": name}
@@ -97,7 +134,7 @@ def analyze_post_patterns(
     return {
         "subreddit": name,
         "sampled": len(rows),
-        "listing": f"{listing_type}/{time_filter if listing_type == 'top' else ''}".rstrip("/"),
+        "source": source_label,
         "score_stats": {"avg": safe_mean(scores), "max": max(scores), "median": sorted(scores)[len(scores)//2]},
         "best_posting_hours_utc": best_hours,
         "best_posting_days": best_days,

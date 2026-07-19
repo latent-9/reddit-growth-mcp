@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
 # Reddit's removed_by_category values that indicate a *moderator/admin* action
@@ -135,6 +136,34 @@ def submission_to_features(submission: Any) -> Dict[str, Any]:
     if created:
         features.update(extract_time_features(created))
     return features
+
+
+def features_from_arctic(post: Dict[str, Any]) -> Dict[str, Any]:
+    """Adapt an Arctic Shift post dict into the same feature dict as PRAW.
+
+    Wraps the mapping in an attribute-style object so the shared extractors
+    (which use getattr) work unchanged.
+    """
+    obj = SimpleNamespace(
+        id=post.get("id"),
+        title=post.get("title", "") or "",
+        selftext=post.get("selftext", "") or "",
+        score=post.get("score", 0) or 0,
+        upvote_ratio=post.get("upvote_ratio"),
+        num_comments=post.get("num_comments", 0) or 0,
+        link_flair_text=post.get("link_flair_text"),
+        is_self=post.get("is_self", False),
+        is_gallery=post.get("is_gallery", False),
+        is_video=post.get("is_video", False),
+        over_18=post.get("over_18", False),
+        stickied=post.get("stickied", False),
+        permalink=post.get("permalink", "") or "",
+        created_utc=post.get("created_utc", 0) or 0,
+        url=post.get("url", "") or "",
+        domain=post.get("domain", "") or "",
+        removed_by_category=post.get("removed_by_category"),
+    )
+    return submission_to_features(obj)
 
 
 def clean_subreddit_name(name: str) -> str:

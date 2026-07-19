@@ -53,17 +53,21 @@ def _get(path: str, params: Dict[str, Any], timeout: int = 20) -> Dict[str, Any]
 def fetch_recent_posts(
     subreddit: str,
     after: str = "14d",
+    before: Optional[str] = None,
     limit: int = 100,
     sort: str = "desc",
 ) -> List[Dict[str, Any]]:
     """Fetch archived posts for a subreddit within a time window.
 
-    `after` accepts Arctic offsets like '7d', '14d', '1month', or ISO dates.
-    Returns the raw archived post dicts (as captured near creation time).
+    `after`/`before` accept Arctic offsets like '7d', '2d', '1month', or ISO
+    dates. Use `before='2d'` for score-based analysis: posts younger than
+    ~36h have unsettled (0/1) scores in the archive.
+    Returns the raw archived post dicts.
     """
     data = _get("/api/posts/search", {
         "subreddit": subreddit,
         "after": after,
+        "before": before,
         "limit": max(1, min(limit, 100)),
         "sort": sort,
     })

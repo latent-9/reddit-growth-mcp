@@ -9,6 +9,7 @@ from src.analysis.helpers import (
     extract_time_features,
     clean_subreddit_name,
     submission_to_features,
+    features_from_arctic,
 )
 
 
@@ -73,3 +74,20 @@ def test_submission_to_features_shape():
     assert feats["media_type"] == "text"
     assert feats["removal_status"] == "live"
     assert "char_length" in feats and "hour_utc" in feats
+
+
+def test_features_from_arctic():
+    # Arctic returns plain dicts (with some fields absent, e.g. is_gallery).
+    post = {
+        "id": "xyz", "title": "Fedora Silverblue setup notes",
+        "selftext": "steps...", "score": 120, "num_comments": 8,
+        "created_utc": 1_700_000_000, "url": "https://reddit.com/r/Fedora/x",
+        "domain": "self.Fedora", "is_self": True, "link_flair_text": "Guide",
+        "removed_by_category": None, "permalink": "/r/Fedora/comments/xyz/",
+    }
+    feats = features_from_arctic(post)
+    assert feats["score"] == 120
+    assert feats["media_type"] == "text"
+    assert feats["flair"] == "Guide"
+    assert feats["removal_status"] == "live"
+    assert feats["is_question"] is False
