@@ -1,37 +1,12 @@
-"""Reddit MCP Tools - Semantic discovery and Reddit research operations.
+"""Reddit data-access tools — raw fetch/search over posts and comments."""
 
-Export key classes and functions for public API.
-"""
-
-from .discover import (
-    discover_subreddits,
-    validate_subreddit,
-    SearchConfig,
-    DEFAULT_SEARCH_CONFIG,
-    calculate_confidence_from_distance,
-    classify_match_tier,
-)
-
-from .feed import (
-    create_feed,
-    list_feeds,
-    get_feed,
-    update_feed,
-    delete_feed,
-)
+from .search import search_in_subreddit
+from .posts import fetch_subreddit_posts, fetch_multiple_subreddits
+from .comments import fetch_submission_with_comments
 
 __all__ = [
-    # Reddit discovery
-    "discover_subreddits",
-    "validate_subreddit",
-    "SearchConfig",
-    "DEFAULT_SEARCH_CONFIG",
-    "calculate_confidence_from_distance",
-    "classify_match_tier",
-    # Feeds
-    "create_feed",
-    "list_feeds",
-    "get_feed",
-    "update_feed",
-    "delete_feed",
+    "search_in_subreddit",
+    "fetch_subreddit_posts",
+    "fetch_multiple_subreddits",
+    "fetch_submission_with_comments",
 ]

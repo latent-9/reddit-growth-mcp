@@ -52,7 +52,7 @@ def fetch_subreddit_posts(
             return {
                 "error": f"Subreddit r/{clean_name} not found",
                 "status_code": 404,
-                "recovery": "Use discover_subreddits to find valid communities"
+                "recovery": "Use find_target_subreddits to find valid communities"
             }
         except Forbidden as e:
             return {
@@ -270,7 +270,7 @@ async def fetch_multiple_subreddits(
             return {
                 "error": f"Failed to fetch from multiple subreddits: {str(e)}",
                 "error_type": type(e).__name__,
-                "recovery": "Use discover_subreddits to find valid community names"
+                "recovery": "Use find_target_subreddits to find valid community names"
             }
 
     except Exception as e:

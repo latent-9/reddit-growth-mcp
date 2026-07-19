@@ -60,7 +60,7 @@ def search_in_subreddit(
             return {
                 "error": f"Subreddit r/{clean_name} not found",
                 "status_code": 404,
-                "recovery": "Use discover_subreddits to find valid communities"
+                "recovery": "Use find_target_subreddits to find valid communities"
             }
         except Forbidden as e:
             return {

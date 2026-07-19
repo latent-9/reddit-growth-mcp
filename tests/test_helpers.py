@@ -1,0 +1,75 @@
+"""Unit tests for feature-extraction helpers (no network required)."""
+
+from types import SimpleNamespace
+
+from src.analysis.helpers import (
+    classify_removal,
+    detect_media_type,
+    extract_title_features,
+    extract_time_features,
+    clean_subreddit_name,
+    submission_to_features,
+)
+
+
+def _sub(**kwargs):
+    """Build a fake submission with sane defaults."""
+    defaults = dict(
+        id="abc", title="Hello world", selftext="", score=10, upvote_ratio=0.9,
+        num_comments=3, link_flair_text=None, is_self=True, is_gallery=False,
+        is_video=False, over_18=False, stickied=False, permalink="/r/x/comments/abc/",
+        created_utc=1_700_000_000.0, url="https://reddit.com/x", domain="self.x",
+        removed_by_category=None,
+    )
+    defaults.update(kwargs)
+    return SimpleNamespace(**defaults)
+
+
+def test_clean_subreddit_name():
+    assert clean_subreddit_name("r/Python") == "Python"
+    assert clean_subreddit_name("/r/aiArt ") == "aiArt"
+    assert clean_subreddit_name("MachineLearning") == "MachineLearning"
+
+
+def test_classify_removal():
+    assert classify_removal(_sub(removed_by_category=None)) == "live"
+    assert classify_removal(_sub(removed_by_category="moderator")) == "mod_removed"
+    assert classify_removal(_sub(removed_by_category="deleted")) == "author_removed"
+    assert classify_removal(_sub(selftext="[removed]")) == "mod_removed"
+
+
+def test_detect_media_type():
+    assert detect_media_type(_sub(is_self=True)) == "text"
+    assert detect_media_type(_sub(is_self=False, domain="i.redd.it", url="x.png")) == "image"
+    assert detect_media_type(_sub(is_self=False, is_video=True, domain="v.redd.it")) == "video"
+    assert detect_media_type(_sub(is_self=False, domain="youtube.com")) == "video_external"
+    assert detect_media_type(_sub(is_self=False, domain="example.com", url="https://example.com")) == "link"
+
+
+def test_extract_title_features():
+    q = extract_title_features("How do I build an ASCII renderer?")
+    assert q["is_question"] is True
+    assert q["word_count"] == 7
+
+    lst = extract_title_features("5 tips for prompting Claude")
+    assert lst["is_list"] is True
+    assert lst["has_number"] is True
+
+    show = extract_title_features("I made a tiny AI art tool")
+    assert show["is_showcase"] is True
+
+
+def test_extract_time_features():
+    tf = extract_time_features(1_700_000_000.0)
+    assert 0 <= tf["hour_utc"] <= 23
+    assert tf["weekday_name"] in {
+        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
+    }
+
+
+def test_submission_to_features_shape():
+    feats = submission_to_features(_sub(title="Best AI repo of 2025", score=42))
+    assert feats["score"] == 42
+    assert feats["media_type"] == "text"
+    assert feats["removal_status"] == "live"
+    assert "char_length" in feats and "hour_utc" in feats
