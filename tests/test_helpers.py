@@ -10,6 +10,7 @@ from src.analysis.helpers import (
     clean_subreddit_name,
     submission_to_features,
     features_from_arctic,
+    winning_keywords,
 )
 
 
@@ -91,3 +92,18 @@ def test_features_from_arctic():
     assert feats["flair"] == "Guide"
     assert feats["removal_status"] == "live"
     assert feats["is_question"] is False
+
+
+def test_winning_keywords():
+    # "ascii" appears only in high-scoring titles → should rank as a winner.
+    rows = [{"title": f"ascii art showcase {i}", "score": 500 - i} for i in range(6)]
+    rows += [{"title": f"random support question {i}", "score": i} for i in range(6)]
+    kws = winning_keywords(rows, top_frac=0.5, min_count=2)
+    words = [k["word"] for k in kws]
+    assert "ascii" in words
+    top = next(k for k in kws if k["word"] == "ascii")
+    assert top["lift"] > 1.0
+
+
+def test_winning_keywords_small_sample_returns_empty():
+    assert winning_keywords([{"title": "hi", "score": 1}]) == []

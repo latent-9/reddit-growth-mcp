@@ -39,6 +39,7 @@ dev = [
 
 [project.scripts]
 reddit-analyzer = "src.server:main"
+reddit-analyzer-cli = "src.cli:main"
 
 [build-system]
 requires = ["hatchling"]

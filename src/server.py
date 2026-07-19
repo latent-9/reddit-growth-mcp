@@ -28,6 +28,7 @@ from src.analysis.traffic import estimate_subreddit_traffic, find_target_subredd
 from src.analysis.acceptance import analyze_acceptance as _analyze_acceptance
 from src.analysis.patterns import analyze_post_patterns as _analyze_post_patterns
 from src.analysis.draft import evaluate_draft as _evaluate_draft
+from src.analysis.compare import compare_subreddits as _compare_subreddits
 
 mcp = FastMCP("Reddit Analyzer", instructions="""
 Reddit Analyzer — find where to post and how to get accepted.
@@ -147,6 +148,19 @@ def evaluate_draft(
     # Runs creds-free (archive removal + patterns); with creds it also checks
     # exact rule compliance.
     return _evaluate_draft(subreddit_name, title, reddit, body, post_type, flair, time_filter, ctx)
+
+
+@mcp.tool(
+    description="Rank subreddits by posting opportunity (removal risk vs reach). No creds needed.",
+    annotations={"readOnlyHint": True},
+)
+def compare_subreddits(
+    subreddits: Annotated[List[str], "Subreddit names to compare"],
+    window: Annotated[str, "Archive lookback, e.g. 30d/60d/90d"] = "60d",
+    sample: Annotated[int, "Posts to sample per subreddit"] = 200,
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    return _compare_subreddits(subreddits, window, sample, ctx)
 
 
 # ── Raw data access tools ─────────────────────────────────────────────────

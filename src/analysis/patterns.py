@@ -15,7 +15,7 @@ from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
 
 from .helpers import (
     clean_subreddit_name, submission_to_features, features_from_arctic,
-    safe_mean, top_counter,
+    safe_mean, winning_keywords,
 )
 from . import arctic
 
@@ -28,13 +28,14 @@ _ARCHIVE_WINDOW = {"day": "7d", "week": "21d", "month": "60d", "year": "365d", "
 def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str, Any]]:
     """Pattern rows from the Arctic archive (no Reddit creds needed).
 
-    Excludes the last ~2 days so scores are settled, then keeps the
-    highest-scoring posts to mirror a 'top' listing.
+    Pages back through the window (excluding the last ~2 days so scores are
+    settled), then sorts by score to mirror a 'top' listing.
     """
     window = _ARCHIVE_WINDOW.get(time_filter, "60d")
-    posts = arctic.fetch_recent_posts(name, after=window, before="2d",
-                                      limit=min(limit, 100), sort="desc")
-    rows = [features_from_arctic(p) for p in posts if not p.get("stickied")]
+    posts = arctic.fetch_many_posts(name, after=window, before="2d",
+                                    target=max(limit, 100))
+    rows = [features_from_arctic(p) for p in posts
+            if not p.get("stickied") and p.get("removed_by_category") is None]
     rows.sort(key=lambda r: r["score"], reverse=True)
     return rows
 
@@ -149,6 +150,7 @@ def analyze_post_patterns(
             "has_number": _bool_lift(rows, "has_number"),
             "has_emoji": _bool_lift(rows, "has_emoji"),
         },
+        "winning_keywords": winning_keywords(rows),
         "top_examples": [
             {"title": r["title"], "score": r["score"], "flair": r["flair"],
              "media_type": r["media_type"], "permalink": r["permalink"]}

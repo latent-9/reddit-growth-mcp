@@ -11,7 +11,8 @@ right high-traffic communities and post content that fits.
 | `find_target_subreddits_tool` | Which subreddits fit my topics, ranked by estimated traffic? |
 | `analyze_subreddit` | How big/active is this community? |
 | `analyze_acceptance` | Will my post survive here? (real removal rate + what gets nuked; rules/gates when creds present) |
-| `analyze_post_patterns` | What makes posts perform? (timing, title style, media, flair) |
+| `analyze_post_patterns` | What makes posts perform? (timing, title style, media, flair, winning keywords) |
+| `compare_subreddits` | Which of these subs gives the best shot? (reach vs removal risk) |
 | `evaluate_draft` | Score a specific draft for acceptance risk + engagement |
 | `fetch_posts` · `fetch_multiple` · `search_subreddit` · `fetch_comments` | Raw data access |
 
@@ -63,6 +64,19 @@ get accepted in r/linux?"* — the client calls the tools for you.
 ```bash
 uv run python -m src.server   # starts the MCP server on stdio
 ```
+
+## CLI (no MCP client needed)
+
+Run analyses directly in the terminal — works without Reddit credentials:
+
+```bash
+uv run python -m src.cli patterns Fedora --time month     # what performs here
+uv run python -m src.cli acceptance technology            # removal rate + what gets nuked
+uv run python -m src.cli compare Fedora gnome linux        # rank subs by opportunity
+uv run python -m src.cli draft ClaudeAI --title "I built an ASCII art tool"
+```
+
+Add `--json` to any command for raw output (piping, scripts).
 
 ## Notes & limits
 

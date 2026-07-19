@@ -17,6 +17,7 @@ Arctic is unavailable. stdlib-only (urllib) to keep dependencies slim.
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -73,6 +74,46 @@ def fetch_recent_posts(
     })
     payload = data.get("data", data)
     return payload if isinstance(payload, list) else []
+
+
+def fetch_many_posts(
+    subreddit: str,
+    after: str = "180d",
+    before: str = "2d",
+    target: int = 300,
+    page: int = 100,
+    delay: float = 1.0,
+) -> List[Dict[str, Any]]:
+    """Page backwards through the archive to collect up to `target` posts.
+
+    Arctic caps each request at 100, so this walks the `before` cursor back in
+    time. A small `delay` between pages keeps us under the free rate limit.
+    Returns whatever it gathered; partial results on rate-limit are fine.
+    """
+    out: List[Dict[str, Any]] = []
+    seen: set = set()
+    cursor = before
+    while len(out) < target:
+        try:
+            batch = fetch_recent_posts(subreddit, after=after, before=cursor,
+                                       limit=page, sort="desc")
+        except ArcticUnavailable:
+            break  # keep what we have
+        if not batch:
+            break
+        fresh = [p for p in batch if p.get("id") and p["id"] not in seen]
+        if not fresh:
+            break
+        for p in fresh:
+            seen.add(p["id"])
+        out.extend(fresh)
+        oldest = min((p.get("created_utc", 0) or 0) for p in batch)
+        if not oldest or len(batch) < page:
+            break
+        cursor = int(oldest)  # epoch seconds; next page is strictly older
+        if len(out) < target:
+            time.sleep(delay)
+    return out[:target]
 
 
 def aggregate_post_frequency(

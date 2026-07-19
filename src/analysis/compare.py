@@ -1,0 +1,72 @@
+"""Compare subreddits to decide where a post is most likely to land well.
+
+Creds-free: everything is computed from the Arctic archive. For each subreddit
+we combine how *forgiving* it is (low mod-removal rate) with how much *reach* a
+typical surviving post gets (median score) into one opportunity score.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Dict, List, Union
+
+from .helpers import clean_subreddit_name, features_from_arctic, safe_mean
+from . import arctic
+
+
+def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
+    posts = arctic.fetch_many_posts(name, after=window, before="2d", target=sample)
+    if not posts:
+        return {"subreddit": name, "error": "no archived posts (or rate-limited)"}
+
+    rows = [features_from_arctic(p) for p in posts]
+    live = [r for r in rows if r["removal_status"] == "live"]
+    removed = [r for r in rows if r["removal_status"] == "mod_removed"]
+    considered = len(live) + len(removed)
+    removal_rate = round(len(removed) / considered, 3) if considered else 0.0
+
+    live_scores = [r["score"] for r in live]
+    median_score = sorted(live_scores)[len(live_scores) // 2] if live_scores else 0
+    # Opportunity: reach of a typical surviving post, discounted by removal risk.
+    opportunity = round(median_score * (1 - removal_rate), 1)
+
+    media = {}
+    for r in live:
+        media[r["media_type"]] = media.get(r["media_type"], 0) + 1
+    top_media = max(media, key=media.get) if media else None
+
+    return {
+        "subreddit": name,
+        "sampled": len(rows),
+        "removal_rate": removal_rate,
+        "median_score": median_score,
+        "avg_score": safe_mean(live_scores),
+        "best_media": top_media,
+        "opportunity_score": opportunity,
+    }
+
+
+def compare_subreddits(
+    subreddits: Union[str, List[str]],
+    window: str = "60d",
+    sample: int = 200,
+    ctx: Any = None,
+) -> Dict[str, Any]:
+    """Profile and rank subreddits by posting opportunity (no creds needed)."""
+    if isinstance(subreddits, str):
+        subreddits = [subreddits]
+    names = [clean_subreddit_name(s) for s in subreddits if s and s.strip()]
+    if not names:
+        return {"error": "Provide at least one subreddit name"}
+
+    profiles = [_profile_subreddit(n, window, sample) for n in names]
+    ranked = [p for p in profiles if "error" not in p]
+    ranked.sort(key=lambda p: p["opportunity_score"], reverse=True)
+    failed = [p for p in profiles if "error" in p]
+
+    return {
+        "ranked": ranked,
+        "failed": failed,
+        "best_pick": ranked[0]["subreddit"] if ranked else None,
+        "criteria": "opportunity = median surviving-post score × (1 − mod removal rate)",
+        "disclaimer": "Creds-free estimate from the Arctic archive; a sample, not a census.",
+    }

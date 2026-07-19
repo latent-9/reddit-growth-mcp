@@ -175,6 +175,61 @@ def safe_mean(values: List[float]) -> float:
     return round(sum(values) / len(values), 2) if values else 0.0
 
 
+_STOPWORDS = set(
+    "the a an and or but of to in for on with is are was were be been being this "
+    "that these those it its as at by from up down out so if then than too very can "
+    "will just my your our their his her you i we they he she them what how why when "
+    "who which do does did have has had not no yes new get got make made use using "
+    "vs via about into over after before".split()
+)
+_TOKEN = re.compile(r"[a-z0-9][a-z0-9'+/-]*")
+
+
+def winning_keywords(
+    rows: List[Dict[str, Any]],
+    top_frac: float = 0.25,
+    min_count: int = 3,
+    n: int = 12,
+) -> List[Dict[str, Any]]:
+    """Words over-represented in high-scoring titles vs the rest.
+
+    Splits `rows` (each with 'title' and 'score') into a top slice and the
+    remainder, then ranks words by how much more often they appear up top.
+    Uses additive smoothing so rare words don't produce infinite lift.
+    """
+    if len(rows) < 8:
+        return []
+    ranked = sorted(rows, key=lambda r: r["score"], reverse=True)
+    k = max(1, int(len(ranked) * top_frac))
+    top, rest = ranked[:k], ranked[k:]
+
+    def doc_counts(rs: List[Dict[str, Any]]) -> Dict[str, int]:
+        c: Dict[str, int] = {}
+        for r in rs:
+            words = {w for w in _TOKEN.findall((r.get("title") or "").lower())
+                     if w not in _STOPWORDS and len(w) > 2}
+            for w in words:
+                c[w] = c.get(w, 0) + 1
+        return c
+
+    tc, rc = doc_counts(top), doc_counts(rest)
+    n_top, n_rest = len(top), max(len(rest), 1)
+    results = []
+    for w, ct in tc.items():
+        if ct < min_count:
+            continue
+        top_rate = ct / n_top
+        rest_rate = (rc.get(w, 0) + 0.5) / (n_rest + 1)  # smoothed
+        results.append({
+            "word": w,
+            "count_in_top": ct,
+            "top_rate": round(top_rate, 2),
+            "lift": round(top_rate / rest_rate, 1),
+        })
+    results.sort(key=lambda d: d["lift"], reverse=True)
+    return results[:n]
+
+
 def top_counter(pairs: Dict[Any, int], n: int = 3) -> List[Dict[str, Any]]:
     """Return the top-n (key, count) pairs as a list of dicts."""
     ranked = sorted(pairs.items(), key=lambda kv: kv[1], reverse=True)
