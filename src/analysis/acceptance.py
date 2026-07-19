@@ -23,6 +23,7 @@ from .helpers import (
     submission_to_features,
     safe_mean,
 )
+from . import arctic
 
 # Phrases in rule text that hint at account-based gates (karma / age).
 _KARMA_PATTERN = re.compile(r"(\d[\d,]*)\s*\+?\s*(comment|post|combined|total)?\s*karma", re.I)
@@ -72,13 +73,62 @@ def _load_post_requirements(sub: praw.reddit.Subreddit) -> Dict[str, Any]:
     }
 
 
+def _sample_via_praw(sub, sample_size: int):
+    """Removal sample from PRAW `.new()`. Lower bound: removed posts are hidden."""
+    live, mod_removed = [], []
+    for post in sub.new(limit=sample_size):
+        feats = submission_to_features(post)
+        if feats["removal_status"] == "mod_removed":
+            mod_removed.append(feats)
+        elif feats["removal_status"] == "live":
+            live.append(feats)
+    return live, mod_removed
+
+
+def _sample_via_archive(name: str, reddit: praw.Reddit, after: str, limit: int):
+    """Reveddit-style removal sample: archived posts diffed against live Reddit.
+
+    Arctic Shift keeps posts that were later mod-removed; fetching their live
+    state via `reddit.info` reveals removals PRAW's `.new()` would never show.
+    """
+    archived = arctic.fetch_recent_posts(name, after=after, limit=limit)
+    ids = [p.get("id") for p in archived if p.get("id")]
+    if not ids:
+        raise arctic.ArcticUnavailable("no archived posts returned")
+
+    live_map = {}
+    fullnames = [f"t3_{i}" for i in ids]
+    for start in range(0, len(fullnames), 100):
+        for s in reddit.info(fullnames[start:start + 100]):
+            live_map[s.id] = s
+
+    live, mod_removed = [], []
+    for pid in ids:
+        s = live_map.get(pid)
+        if s is None:
+            continue  # gone entirely; ambiguous, skip
+        feats = submission_to_features(s)
+        if feats["removal_status"] == "mod_removed":
+            mod_removed.append(feats)
+        elif feats["removal_status"] == "live":
+            live.append(feats)
+    return live, mod_removed
+
+
 def analyze_acceptance(
     subreddit_name: str,
     reddit: praw.Reddit,
     sample_size: int = 100,
+    use_archive: bool = True,
+    archive_window: str = "14d",
     ctx: Any = None,
 ) -> Dict[str, Any]:
-    """Analyze how strict a subreddit is and what tends to get removed."""
+    """Analyze how strict a subreddit is and what tends to get removed.
+
+    When `use_archive` is set, removal detection uses the Arctic Shift archive
+    diffed against live Reddit (accurate), falling back to PRAW sampling (a
+    lower bound) if the archive is unavailable.
+    """
     name = clean_subreddit_name(subreddit_name)
     try:
         sub = reddit.subreddit(name)
@@ -95,15 +145,21 @@ def analyze_acceptance(
     rules_text = " ".join(r["name"] + " " + r["description"] for r in rules)
     account_gates = _extract_account_gates(rules_text)
 
-    # Empirical removal analysis over recent posts.
+    # Empirical removal analysis. Prefer the accurate archive-vs-live diff;
+    # fall back to PRAW's (lower-bound) listing if the archive is unavailable.
     live, mod_removed = [], []
+    method = "praw_listing"
     try:
-        for post in sub.new(limit=sample_size):
-            feats = submission_to_features(post)
-            if feats["removal_status"] == "mod_removed":
-                mod_removed.append(feats)
-            elif feats["removal_status"] == "live":
-                live.append(feats)
+        if use_archive:
+            try:
+                live, mod_removed = _sample_via_archive(
+                    name, reddit, archive_window, sample_size)
+                method = "archive_diff"
+            except arctic.ArcticUnavailable:
+                live, mod_removed = _sample_via_praw(sub, sample_size)
+                method = "praw_listing_fallback"
+        else:
+            live, mod_removed = _sample_via_praw(sub, sample_size)
     except (TooManyRequests, ResponseException) as e:
         return {"error": f"Failed to sample posts: {e}", "rules": rules,
                 "post_requirements": requirements}
@@ -153,9 +209,18 @@ def analyze_acceptance(
     strictness = ("high" if removal_rate >= 0.3 or account_gates or requirements.get("flair_required")
                   else "medium" if removal_rate >= 0.1 else "low")
 
+    if method == "archive_diff":
+        removal_note = (
+            "Removal rate from archive-vs-live diff (Arctic Shift): accurate, "
+            "includes posts PRAW's listing hides."
+        )
+    else:
+        removal_note = "Removal rate is a LOWER BOUND — PRAW listing hides removed posts."
+
     return {
         "subreddit": name,
         "strictness": strictness,
+        "detection_method": method,
         "removal_rate_estimate": removal_rate,
         "sampled_posts": sampled,
         "mod_removed_count": len(mod_removed),
@@ -166,7 +231,7 @@ def analyze_acceptance(
         "surviving_media_mix": dict(live_media),
         "acceptance_checklist": checklist,
         "disclaimer": (
-            "Removal rate is a lower bound (API hides some removed posts). "
-            "AutoMod config is private; account gates are inferred from rule text."
+            f"{removal_note} AutoMod config is private; account gates are "
+            "inferred from rule text."
         ),
     }

@@ -95,10 +95,12 @@ def analyze_subreddit(
 )
 def analyze_acceptance(
     subreddit_name: Annotated[str, "Subreddit name (without r/)"],
-    sample_size: Annotated[int, "Recent posts to sample for removal analysis"] = 100,
+    sample_size: Annotated[int, "Posts to sample for removal analysis"] = 100,
+    use_archive: Annotated[bool, "Use Arctic Shift archive-vs-live diff for accurate removal detection"] = True,
+    archive_window: Annotated[str, "Archive lookback window, e.g. 7d/14d/1month"] = "14d",
     ctx: Context = None,
 ) -> Dict[str, Any]:
-    return _analyze_acceptance(subreddit_name, reddit, sample_size, ctx)
+    return _analyze_acceptance(subreddit_name, reddit, sample_size, use_archive, archive_window, ctx)
 
 
 @mcp.tool(
