@@ -47,7 +47,8 @@ reddit = None
 _NO_CREDS = {
     "error": "Reddit credentials not configured",
     "hint": "Set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env. "
-            "Tip: analyze_post_patterns works without creds via source='archive'.",
+            "Tip: analyze_post_patterns and analyze_acceptance already work "
+            "without credentials (via the Arctic archive).",
 }
 
 
@@ -110,8 +111,8 @@ def analyze_acceptance(
     archive_window: Annotated[str, "Archive lookback window, e.g. 7d/14d/1month"] = "14d",
     ctx: Context = None,
 ) -> Dict[str, Any]:
-    if reddit is None:
-        return _NO_CREDS
+    # Works without credentials: removal analysis runs from the Arctic archive.
+    # When creds exist, official rules + account gates are added on top.
     return _analyze_acceptance(subreddit_name, reddit, sample_size, use_archive, archive_window, ctx)
 
 
@@ -143,8 +144,8 @@ def evaluate_draft(
     time_filter: Annotated[str, "Pattern window: all|year|month|week"] = "month",
     ctx: Context = None,
 ) -> Dict[str, Any]:
-    if reddit is None:
-        return _NO_CREDS
+    # Runs creds-free (archive removal + patterns); with creds it also checks
+    # exact rule compliance.
     return _evaluate_draft(subreddit_name, title, reddit, body, post_type, flair, time_filter, ctx)
 
 

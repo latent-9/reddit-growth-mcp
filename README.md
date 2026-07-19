@@ -10,7 +10,7 @@ right high-traffic communities and post content that fits.
 |------|-----------------|
 | `find_target_subreddits_tool` | Which subreddits fit my topics, ranked by estimated traffic? |
 | `analyze_subreddit` | How big/active is this community? |
-| `analyze_acceptance` | Will my post survive here? (rules, karma/age gates, real removal rate) |
+| `analyze_acceptance` | Will my post survive here? (real removal rate + what gets nuked; rules/gates when creds present) |
 | `analyze_post_patterns` | What makes posts perform? (timing, title style, media, flair) |
 | `evaluate_draft` | Score a specific draft for acceptance risk + engagement |
 | `fetch_posts` · `fetch_multiple` · `search_subreddit` · `fetch_comments` | Raw data access |
@@ -23,10 +23,11 @@ like `Fedora`, `gnome`, `linux`, as well as `ClaudeAI`, `MachineLearning`, etc.
 - **[PRAW](https://praw.readthedocs.io/)** — live Reddit (read-only). Needs API credentials.
 - **[Arctic Shift](https://github.com/ArthurHeitmann/arctic_shift)** — historical archive (Pushshift successor). No credentials needed.
 
-`analyze_acceptance` detects moderator removals the reveddit way: it diffs the
-Arctic archive (posts that *existed*) against live Reddit, revealing removed
-posts that PRAW's listing hides. `analyze_post_patterns` can run entirely from
-the archive (`source="archive"`), so it works **without any Reddit credentials**.
+**`analyze_post_patterns` and `analyze_acceptance` work without any Reddit
+credentials** — both run from the Arctic archive, which records moderator
+removals directly (the reveddit signal without a live diff). Adding Reddit
+credentials layers on the official rule text, post requirements, and traffic
+metrics that the archive doesn't carry.
 
 ## Setup
 

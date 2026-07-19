@@ -21,6 +21,7 @@ from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
 from .helpers import (
     clean_subreddit_name,
     submission_to_features,
+    features_from_arctic,
     safe_mean,
 )
 from . import arctic
@@ -85,29 +86,21 @@ def _sample_via_praw(sub, sample_size: int):
     return live, mod_removed
 
 
-def _sample_via_archive(name: str, reddit: praw.Reddit, after: str, limit: int):
-    """Reveddit-style removal sample: archived posts diffed against live Reddit.
+def _sample_via_archive(name: str, after: str, limit: int):
+    """Removal sample straight from the Arctic archive — no Reddit creds needed.
 
-    Arctic Shift keeps posts that were later mod-removed; fetching their live
-    state via `reddit.info` reveals removals PRAW's `.new()` would never show.
+    Arctic re-checks posts after creation, so its `removed_by_category` /
+    `[removed]` selftext already flags moderator removals that PRAW's `.new()`
+    listing hides entirely. This is the reveddit signal without a live diff.
     """
-    archived = arctic.fetch_recent_posts(name, after=after, limit=limit)
-    ids = [p.get("id") for p in archived if p.get("id")]
-    if not ids:
+    archived = arctic.fetch_recent_posts(name, after=after, before="1d",
+                                         limit=limit, sort="desc")
+    if not archived:
         raise arctic.ArcticUnavailable("no archived posts returned")
 
-    live_map = {}
-    fullnames = [f"t3_{i}" for i in ids]
-    for start in range(0, len(fullnames), 100):
-        for s in reddit.info(fullnames[start:start + 100]):
-            live_map[s.id] = s
-
     live, mod_removed = [], []
-    for pid in ids:
-        s = live_map.get(pid)
-        if s is None:
-            continue  # gone entirely; ambiguous, skip
-        feats = submission_to_features(s)
+    for post in archived:
+        feats = features_from_arctic(post)
         if feats["removal_status"] == "mod_removed":
             mod_removed.append(feats)
         elif feats["removal_status"] == "live":
@@ -117,7 +110,7 @@ def _sample_via_archive(name: str, reddit: praw.Reddit, after: str, limit: int):
 
 def analyze_acceptance(
     subreddit_name: str,
-    reddit: praw.Reddit,
+    reddit: praw.Reddit = None,
     sample_size: int = 100,
     use_archive: bool = True,
     archive_window: str = "14d",
@@ -125,41 +118,55 @@ def analyze_acceptance(
 ) -> Dict[str, Any]:
     """Analyze how strict a subreddit is and what tends to get removed.
 
-    When `use_archive` is set, removal detection uses the Arctic Shift archive
-    diffed against live Reddit (accurate), falling back to PRAW sampling (a
-    lower bound) if the archive is unavailable.
+    Removal analysis runs from the Arctic archive and needs NO Reddit
+    credentials. When a Reddit client is provided, the official rules,
+    post requirements, and account gates are added on top.
     """
     name = clean_subreddit_name(subreddit_name)
-    try:
-        sub = reddit.subreddit(name)
-        _ = sub.display_name  # force existence check
-    except NotFound:
-        return {"error": f"Subreddit r/{name} not found", "status_code": 404}
-    except Forbidden:
-        return {"error": f"r/{name} is private or banned", "status_code": 403}
-    except (TooManyRequests, ResponseException) as e:
-        return {"error": f"Reddit API error: {e}"}
 
-    rules = _load_rules(sub)
-    requirements = _load_post_requirements(sub)
-    rules_text = " ".join(r["name"] + " " + r["description"] for r in rules)
-    account_gates = _extract_account_gates(rules_text)
+    # Official rules / requirements need OAuth; only load them if we have a
+    # Reddit client. Removal analysis below works without one.
+    rules: List[Dict[str, Any]] = []
+    requirements: Dict[str, Any] = {}
+    account_gates: List[Dict[str, Any]] = []
+    sub = None
+    if reddit is not None:
+        try:
+            sub = reddit.subreddit(name)
+            _ = sub.display_name  # force existence check
+            rules = _load_rules(sub)
+            requirements = _load_post_requirements(sub)
+            rules_text = " ".join(r["name"] + " " + r["description"] for r in rules)
+            account_gates = _extract_account_gates(rules_text)
+        except NotFound:
+            return {"error": f"Subreddit r/{name} not found", "status_code": 404}
+        except Forbidden:
+            return {"error": f"r/{name} is private or banned", "status_code": 403}
+        except (TooManyRequests, ResponseException) as e:
+            return {"error": f"Reddit API error: {e}"}
 
-    # Empirical removal analysis. Prefer the accurate archive-vs-live diff;
-    # fall back to PRAW's (lower-bound) listing if the archive is unavailable.
+    # Empirical removal analysis. Archive-direct is preferred (accurate + no
+    # creds); PRAW listing is a lower-bound fallback when a client exists.
     live, mod_removed = [], []
-    method = "praw_listing"
+    method = "archive"
     try:
         if use_archive:
             try:
-                live, mod_removed = _sample_via_archive(
-                    name, reddit, archive_window, sample_size)
-                method = "archive_diff"
+                live, mod_removed = _sample_via_archive(name, archive_window, sample_size)
+                method = "archive"
             except arctic.ArcticUnavailable:
+                if sub is None:
+                    return {"error": "Archive unavailable and no Reddit credentials",
+                            "subreddit": name,
+                            "hint": "Retry later, or add Reddit credentials for the live source."}
                 live, mod_removed = _sample_via_praw(sub, sample_size)
                 method = "praw_listing_fallback"
-        else:
+        elif sub is not None:
             live, mod_removed = _sample_via_praw(sub, sample_size)
+            method = "praw_listing"
+        else:
+            return {"error": "use_archive=False requires Reddit credentials",
+                    "subreddit": name}
     except (TooManyRequests, ResponseException) as e:
         return {"error": f"Failed to sample posts: {e}", "rules": rules,
                 "post_requirements": requirements}
@@ -206,14 +213,18 @@ def analyze_acceptance(
     if removal_rate >= 0.3:
         checklist.append(f"HIGH removal rate ({removal_rate:.0%}) — this sub is strict; follow rules exactly.")
 
+    rules_available = reddit is not None and bool(rules or requirements)
+    if not rules_available:
+        checklist.append(
+            "Official rules not loaded (no Reddit credentials) — checklist is "
+            "based on removal patterns only. Add creds for exact rule text."
+        )
+
     strictness = ("high" if removal_rate >= 0.3 or account_gates or requirements.get("flair_required")
                   else "medium" if removal_rate >= 0.1 else "low")
 
-    if method == "archive_diff":
-        removal_note = (
-            "Removal rate from archive-vs-live diff (Arctic Shift): accurate, "
-            "includes posts PRAW's listing hides."
-        )
+    if method.startswith("archive"):
+        removal_note = "Removal rate from the Arctic archive: accurate, includes posts PRAW's listing hides."
     else:
         removal_note = "Removal rate is a LOWER BOUND — PRAW listing hides removed posts."
 
@@ -221,6 +232,7 @@ def analyze_acceptance(
         "subreddit": name,
         "strictness": strictness,
         "detection_method": method,
+        "rules_available": rules_available,
         "removal_rate_estimate": removal_rate,
         "sampled_posts": sampled,
         "mod_removed_count": len(mod_removed),
@@ -232,6 +244,6 @@ def analyze_acceptance(
         "acceptance_checklist": checklist,
         "disclaimer": (
             f"{removal_note} AutoMod config is private; account gates are "
-            "inferred from rule text."
+            "inferred from rule text (requires credentials)."
         ),
     }
