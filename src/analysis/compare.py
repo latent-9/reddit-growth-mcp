@@ -21,8 +21,12 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     rows = [features_from_arctic(p) for p in posts]
     live = [r for r in rows if r["removal_status"] == "live"]
     removed = [r for r in rows if r["removal_status"] == "mod_removed"]
+    filtered = [r for r in rows if r["removal_status"] == "filtered"]
     considered = len(live) + len(removed)
     removal_rate = round(len(removed) / considered, 3) if considered else 0.0
+    # AutoMod-filtered posts are uncertain; a high share means low confidence.
+    filtered_ratio = round(len(filtered) / len(rows), 2) if rows else 0.0
+    low_confidence = filtered_ratio > 0.3 or considered < 10
 
     live_scores = [r["score"] for r in live]
     median_score = sorted(live_scores)[len(live_scores) // 2] if live_scores else 0
@@ -42,6 +46,8 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
         "avg_score": safe_mean(live_scores),
         "best_media": top_media,
         "opportunity_score": opportunity,
+        "low_confidence": low_confidence,
+        "automod_filtered_ratio": filtered_ratio,
     }
 
 

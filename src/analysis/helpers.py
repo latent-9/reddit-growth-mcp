@@ -11,16 +11,20 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from typing import Any, Dict, List, Optional
 
-# Reddit's removed_by_category values that indicate a *moderator/admin* action
-# (as opposed to the author deleting their own post).
+# Reddit's removed_by_category values that indicate a *confirmed* moderator or
+# admin removal (as opposed to the author deleting their own post).
 MOD_REMOVAL_CATEGORIES = {
     "moderator",
-    "automod_filtered",
     "anti_evil_ops",
     "community_ops",
     "reddit",
     "copyright_takedown",
 }
+# `automod_filtered` is NOT a confirmed removal: AutoMod routinely filters posts
+# into the modqueue and a human approves them minutes later. Archives snapshot
+# the post at creation, so this state sticks even for posts that went live.
+# Treated as "uncertain" unless a live check proves otherwise.
+FILTERED_CATEGORIES = {"automod_filtered"}
 AUTHOR_REMOVAL_CATEGORIES = {"deleted", "author"}
 
 _QUESTION_STARTERS = (
@@ -41,15 +45,17 @@ _SHOWCASE_PATTERN = re.compile(
 def classify_removal(submission: Any) -> str:
     """Classify how a post was removed, best-effort without mod permissions.
 
-    Returns one of: "live", "mod_removed", "author_removed", "unknown".
-    Note: removed posts are only partially exposed by the public API, so
-    mod-removal rates derived from this are a *lower bound*.
+    Returns one of: "live", "mod_removed", "author_removed", "filtered",
+    "unknown". "filtered" means AutoMod-queued at capture time — it may well
+    have been approved, so it is uncertain, not a confirmed removal.
     """
     category = getattr(submission, "removed_by_category", None)
     selftext = getattr(submission, "selftext", "") or ""
 
     if category in MOD_REMOVAL_CATEGORIES:
         return "mod_removed"
+    if category in FILTERED_CATEGORIES:
+        return "filtered"
     if category in AUTHOR_REMOVAL_CATEGORIES:
         return "author_removed"
     if selftext == "[removed]":

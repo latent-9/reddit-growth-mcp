@@ -40,6 +40,8 @@ def test_classify_removal():
     assert classify_removal(_sub(removed_by_category="moderator")) == "mod_removed"
     assert classify_removal(_sub(removed_by_category="deleted")) == "author_removed"
     assert classify_removal(_sub(selftext="[removed]")) == "mod_removed"
+    # AutoMod-filtered is uncertain (often approved later), not a confirmed removal.
+    assert classify_removal(_sub(removed_by_category="automod_filtered")) == "filtered"
 
 
 def test_detect_media_type():

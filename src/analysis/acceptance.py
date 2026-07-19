@@ -87,25 +87,59 @@ def _sample_via_praw(sub, sample_size: int):
 
 
 def _sample_via_archive(name: str, after: str, limit: int):
-    """Removal sample straight from the Arctic archive — no Reddit creds needed.
+    """Removal sample straight from the Arctic archive — no Reddit creds.
 
-    Arctic re-checks posts after creation, so its `removed_by_category` /
-    `[removed]` selftext already flags moderator removals that PRAW's `.new()`
-    listing hides entirely. This is the reveddit signal without a live diff.
+    Classifies confirmed removals vs. survivors vs. AutoMod-filtered (uncertain).
+    Because archives snapshot posts at creation, `automod_filtered` here is
+    unreliable, so it is returned separately, not counted as a removal.
     """
-    archived = arctic.fetch_recent_posts(name, after=after, before="1d",
-                                         limit=limit, sort="desc")
+    archived = arctic.fetch_many_posts(name, after=after, before="2d", target=limit)
     if not archived:
         raise arctic.ArcticUnavailable("no archived posts returned")
 
-    live, mod_removed = [], []
+    live, mod_removed, filtered = [], [], []
     for post in archived:
-        feats = features_from_arctic(post)
-        if feats["removal_status"] == "mod_removed":
+        st = features_from_arctic(post)["removal_status"]
+        if st == "mod_removed":
+            mod_removed.append(features_from_arctic(post))
+        elif st == "live":
+            live.append(features_from_arctic(post))
+        elif st == "filtered":
+            filtered.append(features_from_arctic(post))
+    return live, mod_removed, filtered
+
+
+def _sample_via_live_diff(name: str, reddit: praw.Reddit, after: str, limit: int):
+    """Accurate reveddit-style sample: archived posts checked against live Reddit.
+
+    The live state resolves the AutoMod-filtered ambiguity — approved posts read
+    as live, genuinely removed ones as removed. Needs Reddit credentials.
+    """
+    archived = arctic.fetch_many_posts(name, after=after, before="2d", target=limit)
+    ids = [p.get("id") for p in archived if p.get("id")]
+    if not ids:
+        raise arctic.ArcticUnavailable("no archived posts returned")
+
+    live_map = {}
+    fullnames = [f"t3_{i}" for i in ids]
+    for start in range(0, len(fullnames), 100):
+        for s in reddit.info(fullnames[start:start + 100]):
+            live_map[s.id] = s
+
+    live, mod_removed, filtered = [], [], []
+    for pid in ids:
+        s = live_map.get(pid)
+        if s is None:
+            continue
+        feats = submission_to_features(s)
+        st = feats["removal_status"]
+        if st == "mod_removed":
             mod_removed.append(feats)
-        elif feats["removal_status"] == "live":
+        elif st == "live":
             live.append(feats)
-    return live, mod_removed
+        elif st == "filtered":
+            filtered.append(feats)
+    return live, mod_removed, filtered
 
 
 def analyze_acceptance(
@@ -145,22 +179,27 @@ def analyze_acceptance(
         except (TooManyRequests, ResponseException) as e:
             return {"error": f"Reddit API error: {e}"}
 
-    # Empirical removal analysis. Archive-direct is preferred (accurate + no
-    # creds); PRAW listing is a lower-bound fallback when a client exists.
-    live, mod_removed = [], []
+    # Empirical removal analysis. With creds we run the accurate live diff;
+    # without, archive-direct (AutoMod-filtered posts flagged as uncertain).
+    live, mod_removed, filtered = [], [], []
     method = "archive"
     try:
-        if use_archive:
+        if use_archive and sub is not None:
             try:
-                live, mod_removed = _sample_via_archive(name, archive_window, sample_size)
-                method = "archive"
+                live, mod_removed, filtered = _sample_via_live_diff(
+                    name, reddit, archive_window, sample_size)
+                method = "archive_live_diff"
             except arctic.ArcticUnavailable:
-                if sub is None:
-                    return {"error": "Archive unavailable and no Reddit credentials",
-                            "subreddit": name,
-                            "hint": "Retry later, or add Reddit credentials for the live source."}
                 live, mod_removed = _sample_via_praw(sub, sample_size)
                 method = "praw_listing_fallback"
+        elif use_archive:
+            try:
+                live, mod_removed, filtered = _sample_via_archive(name, archive_window, sample_size)
+                method = "archive"
+            except arctic.ArcticUnavailable:
+                return {"error": "Archive unavailable and no Reddit credentials",
+                        "subreddit": name,
+                        "hint": "Retry later, or add Reddit credentials for the live source."}
         elif sub is not None:
             live, mod_removed = _sample_via_praw(sub, sample_size)
             method = "praw_listing"
@@ -173,6 +212,17 @@ def analyze_acceptance(
 
     sampled = len(live) + len(mod_removed)
     removal_rate = round(len(mod_removed) / sampled, 3) if sampled else 0.0
+
+    # Reliability: archive-direct can't confirm AutoMod-filtered posts. If many
+    # are filtered, the removal rate is unreliable — recommend adding creds.
+    total_seen = len(live) + len(mod_removed) + len(filtered)
+    filtered_ratio = round(len(filtered) / total_seen, 2) if total_seen else 0.0
+    if method == "archive" and (filtered_ratio > 0.3 or sampled < 10):
+        reliability = "low"
+    elif method.startswith("praw"):
+        reliability = "medium"
+    else:
+        reliability = "high"
 
     # What distinguishes removed posts from survivors?
     def _share(rows: List[Dict[str, Any]], key: str) -> float:
@@ -210,8 +260,14 @@ def analyze_acceptance(
     if live_media:
         top_media = live_media.most_common(1)[0][0]
         checklist.append(f"Most surviving posts are '{top_media}' type — favor that format.")
-    if removal_rate >= 0.3:
+    if removal_rate >= 0.3 and reliability != "low":
         checklist.append(f"HIGH removal rate ({removal_rate:.0%}) — this sub is strict; follow rules exactly.")
+    if reliability == "low":
+        checklist.append(
+            f"Low-confidence removal read: {filtered_ratio:.0%} of posts are "
+            "AutoMod-filtered (may have been approved). Add Reddit credentials "
+            "for an accurate live check."
+        )
 
     rules_available = reddit is not None and bool(rules or requirements)
     if not rules_available:
@@ -223,8 +279,11 @@ def analyze_acceptance(
     strictness = ("high" if removal_rate >= 0.3 or account_gates or requirements.get("flair_required")
                   else "medium" if removal_rate >= 0.1 else "low")
 
-    if method.startswith("archive"):
-        removal_note = "Removal rate from the Arctic archive: accurate, includes posts PRAW's listing hides."
+    if method == "archive_live_diff":
+        removal_note = "Removal rate from live diff (Arctic archive vs current Reddit): accurate."
+    elif method == "archive":
+        removal_note = ("Removal rate from the archive; AutoMod-filtered posts are "
+                        "excluded as uncertain. Add creds for an accurate live check.")
     else:
         removal_note = "Removal rate is a LOWER BOUND — PRAW listing hides removed posts."
 
@@ -232,10 +291,12 @@ def analyze_acceptance(
         "subreddit": name,
         "strictness": strictness,
         "detection_method": method,
+        "reliability": reliability,
         "rules_available": rules_available,
         "removal_rate_estimate": removal_rate,
         "sampled_posts": sampled,
         "mod_removed_count": len(mod_removed),
+        "automod_filtered_count": len(filtered),
         "account_gates": account_gates,
         "post_requirements": requirements,
         "rules": rules,

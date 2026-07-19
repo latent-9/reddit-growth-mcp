@@ -83,9 +83,11 @@ def _print_patterns(d: dict) -> None:
 def _print_acceptance(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
-    _hr(f"ACCEPTANCE · r/{d['subreddit']}  ({d['detection_method']})")
-    print(f"Strictness: {d['strictness']} · removal rate {d['removal_rate_estimate']:.0%} "
-          f"({d['mod_removed_count']}/{d['sampled_posts']} removed)")
+    _hr(f"ACCEPTANCE · r/{d['subreddit']}  ({d['detection_method']}, reliability: {d.get('reliability')})")
+    print(f"Strictness: {d['strictness']} · confirmed removal rate {d['removal_rate_estimate']:.0%} "
+          f"({d['mod_removed_count']}/{d['sampled_posts']} confirmed)")
+    if d.get("automod_filtered_count"):
+        print(f"AutoMod-filtered (uncertain): {d['automod_filtered_count']} posts")
     print(f"Rules loaded: {d['rules_available']}")
 
     if d.get("surviving_media_mix"):
@@ -107,10 +109,13 @@ def _print_compare(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
     _hr("SUBREDDIT COMPARISON  (higher opportunity = better)")
-    print(f"{'subreddit':20} {'opp':>7} {'median':>7} {'removal':>8} {'best media':>12}")
+    print(f"{'subreddit':20} {'opp':>7} {'median':>7} {'removal':>8} {'best media':>12}  conf")
     for p in d["ranked"]:
+        conf = "low*" if p.get("low_confidence") else "ok"
         print(f"  r/{p['subreddit']:17} {p['opportunity_score']:>7} {p['median_score']:>7} "
-              f"{p['removal_rate']:>7.0%} {str(p['best_media']):>12}")
+              f"{p['removal_rate']:>7.0%} {str(p['best_media']):>12}  {conf}")
+    if any(p.get("low_confidence") for p in d["ranked"]):
+        print("  * low = many AutoMod-filtered posts; add creds for accuracy")
     for f in d.get("failed", []):
         print(f"  r/{f['subreddit']:17} — {f['error']}")
     if d.get("best_pick"):
