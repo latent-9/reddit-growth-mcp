@@ -22,11 +22,21 @@ semantic versioning.
   `report`) with `--json` output, `--metric`, and `--tz` for local times.
 - Arctic Shift client with pagination, retry/backoff, and per-process caching.
 
-### Changed
+### Accuracy
 - Pattern aggregation ranks categories and time buckets by median (outlier
   robust) with minimum-sample gating and per-report confidence levels.
+- Stratified sampling for month-and-longer windows, so a high-volume sub's
+  sample spans the whole period instead of only the last few days.
+- Reported sample date coverage and span, with confidence lowered on thin
+  windows.
+- Trimmed mean alongside median and mean to temper outlier distortion.
+- Posting times ranked by hit-rate (share of posts clearing the 75th
+  percentile) rather than an outlier-prone average.
 - Removal detection treats AutoMod-filtered posts as uncertain, and flags
   low-confidence samples; an accurate live diff runs when credentials exist.
+
+### Changed
+- Response caching, retry/backoff, and local-timezone posting-time display.
 
 ### Removed
 - The previous project's identity, publishing configs, feed API, Descope auth,
