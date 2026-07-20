@@ -111,7 +111,8 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
 
     _hr("Title signals (score lift)")
     for name, sig in d["title_signal_lift"].items():
-        print(f"  {name:18} {sig['lift_pct']:+.0f}%   (n={sig['sample_with']})")
+        flag = "" if sig.get("reliable") else "  (low sample — ignore)"
+        print(f"  {name:18} {sig['lift_pct']:+.0f}%   (n={sig['sample_with']}){flag}")
 
     vp = d.get("viral_profile", {})
     if vp.get("available"):

@@ -352,7 +352,11 @@ _STOPWORDS = set(
     "that these those it its as at by from up down out so if then than too very can "
     "will just my your our their his her you i we they he she them what how why when "
     "who which do does did have has had not no yes new get got make made use using "
-    "vs via about into over after before".split()
+    "vs via about into over after before "
+    # generic filler that added noise on real data
+    "one two now back much rest still also even really way lot all more most some "
+    "any only here there im ive dont cant wont thats going gonna want need know like "
+    "time day today year years people something anything".split()
 )
 _TOKEN = re.compile(r"[a-z0-9][a-z0-9'+/-]*")
 
@@ -379,7 +383,11 @@ def winning_keywords(
     def doc_counts(rs: List[Dict[str, Any]]) -> Dict[str, int]:
         c: Dict[str, int] = {}
         for r in rs:
-            words = {w for w in _TOKEN.findall((r.get("title") or "").lower()) if w not in _STOPWORDS and len(w) > 2}
+            words = {
+                w
+                for w in _TOKEN.findall((r.get("title") or "").lower())
+                if w not in _STOPWORDS and len(w) > 2 and "'" not in w
+            }
             for w in words:
                 c[w] = c.get(w, 0) + 1
         return c
