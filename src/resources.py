@@ -22,6 +22,7 @@ def register_resources(mcp, reddit: praw.Reddit) -> None:
             "tools": {
                 "growth_plan": "One call: safest target + cross-posts + viral recipe + timing (creds-free)",
                 "compare_subreddits": "Rank subs by growth/viral/insight, with traffic + safety (creds-free)",
+                "analyze_insight": "Discussion depth: how substantive a sub's comments are (creds-free)",
                 "analyze_post_patterns": "What makes posts perform: timing, title, media, keywords (creds-free)",
                 "analyze_acceptance": "Removal rate + what gets nuked; rules when creds present (creds-free)",
                 "evaluate_draft": "Predict a draft's performance (0-100) + acceptance risk (creds-free)",

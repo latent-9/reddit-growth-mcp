@@ -22,6 +22,7 @@ API credentials, because it reads from a public historical archive.
 | `analyze_post_patterns` | What performs in a sub: timing, media, title style, flair, keywords, by a configurable metric | No |
 | `analyze_acceptance` | Removal rate and what tends to get removed; official rules when credentials are present | No |
 | `compare_subreddits` | Rank subreddits by viral potential, with traffic (posts/day), discussion, removal risk, and a safety label | No |
+| `analyze_insight` | Discussion depth: how substantive a sub's comments are (median length, substantive ratio) — not just comment count | No |
 | `growth_plan` | One call: safest strong target, cross-post options, viral recipe, and best posting times | No |
 | `evaluate_draft` | Predict a draft's performance (0-100) and acceptance risk, with drivers and fixes | No |
 | `analyze_subreddit` | Estimate a subreddit's activity (posts/day); uses the archive without credentials | No |
@@ -68,6 +69,7 @@ work via the archive.
 
 ```bash
 uv run python -m src.cli traffic LocalLLaMA
+uv run python -m src.cli insight mcp
 uv run python -m src.cli patterns Fedora --time month
 uv run python -m src.cli patterns commandline --metric discussion
 uv run python -m src.cli acceptance technology
@@ -165,6 +167,13 @@ To find where to post for growth, `compare_subreddits` reports, per subreddit:
 A typical flow: `compare` to shortlist safe, high-traffic, high-ceiling subs,
 then `patterns` to read the viral recipe, then `evaluate_draft` to score a draft
 against it before posting.
+
+Reach and insight are different goals. `compare` counts comments (volume);
+`analyze_insight` measures their *depth* — median comment length and the share
+of substantive comments. A sub can have many short one-line replies (high volume,
+low insight) or fewer long technical comments (low volume, high insight). Use
+reach-oriented ranking for visibility, and `analyze_insight` to find where
+thoughtful discussion happens and reputation is built.
 
 ## Accuracy and methodology
 

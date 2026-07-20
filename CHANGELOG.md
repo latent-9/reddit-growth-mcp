@@ -17,9 +17,16 @@ semantic versioning.
   draft is missing to match what goes viral in the sub.
 
 ### Added
+- `analyze_insight`: measure a subreddit's discussion depth (median comment
+  length and substantive ratio) rather than just comment count, to find where
+  thoughtful discussion happens. Credential-free; exposed as an MCP tool and the
+  CLI `insight` command.
+- `growth_plan` MCP tool and `reddit_growth` guided prompt for the full workflow
+  in one step.
 - Credential-free operation for the core analysis tools via the Arctic Shift
   archive: `analyze_post_patterns`, `analyze_acceptance`, `compare_subreddits`,
-  and `evaluate_draft` all work without Reddit API credentials.
+  `analyze_subreddit`, and `evaluate_draft` all work without Reddit API
+  credentials.
 - `compare_subreddits`: rank subreddits by opportunity (reach vs. removal risk),
   now also showing typical comment counts as a discussion signal.
 - `evaluate_draft`: data-driven 0-100 performance prediction against a sub's own
