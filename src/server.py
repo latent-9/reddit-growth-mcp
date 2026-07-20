@@ -15,6 +15,7 @@ from typing import Annotated, Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 from fastmcp import Context, FastMCP
+from fastmcp.prompts import Message
 
 load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -38,15 +39,23 @@ from src.tools.search import search_in_subreddit
 mcp = FastMCP(
     "Reddit Analyzer",
     instructions="""
-Reddit Analyzer — find where to post and how to get accepted.
+Reddit Analyzer — grow a Reddit account by posting where you'll be accepted and
+seen. Works without Reddit credentials (data from the Arctic Shift archive).
 
-Typical workflow:
-1. find_target_subreddits(topics=["ai","ascii art","open source"]) — pick communities.
-2. analyze_acceptance(subreddit) — learn the rules and what gets removed.
-3. analyze_post_patterns(subreddit) — learn what performs (timing, title, media).
-4. evaluate_draft(subreddit, title, ...) — score your draft before posting.
+Fast path (recommended):
+- growth_plan(subreddits=[...]) — one call: safest strong target, cross-post
+  options, its viral recipe, and best posting times.
 
-All traffic figures are estimates (Reddit hides true visitor counts publicly).
+Step by step:
+1. compare_subreddits([...]) — rank by growth/viral/insight, with traffic and a
+   safety label so you avoid mod-heavy communities.
+2. analyze_post_patterns(subreddit) — the viral recipe: media, flair, title tag,
+   keywords, and best times.
+3. analyze_acceptance(subreddit) — removal rate and what gets removed.
+4. evaluate_draft(subreddit, title, ...) — score a draft 0-100 and get fixes.
+
+Use the reddit_growth prompt to run this whole workflow guided.
+All figures are estimates from a sample, not guarantees.
 """,
 )
 
@@ -251,6 +260,51 @@ async def fetch_comments(
     if reddit is None:
         return _NO_CREDS
     return await fetch_submission_with_comments(reddit, submission_id, url, comment_limit, comment_sort, ctx)
+
+
+@mcp.prompt(
+    name="reddit_growth",
+    description="Guided workflow to grow a Reddit account: find safe high-traffic subs and craft a post that performs",
+)
+def reddit_growth(topic: str, subreddits: str = "") -> list[Message]:
+    """Guide the assistant through the full growth workflow for a topic.
+
+    Args:
+        topic: What the user wants to post about (e.g. "an open-source ASCII MCP tool").
+        subreddits: Optional comma-separated candidate subreddits. If empty, ask
+                    the user or suggest some based on the topic.
+    """
+    subs = [s.strip() for s in subreddits.split(",") if s.strip()]
+    subs_line = (
+        f"Candidate subreddits: {subs}."
+        if subs
+        else "No subreddits given — suggest 4-6 relevant, active ones for the topic first."
+    )
+    guide = f"""
+You are helping the user grow their Reddit account by posting about: "{topic}".
+
+{subs_line}
+
+Follow this workflow using the Reddit Analyzer tools (all work without credentials):
+
+1. growth_plan(subreddits=[...]) — get the safest strong target, cross-post
+   options, the viral recipe, and best posting times in one call.
+2. If the plan's recipe is thin, call analyze_post_patterns(target) for detail
+   (media, flair, leading [tag], keywords, timing) and analyze_acceptance(target)
+   for removal risk.
+3. Draft a post title/body that matches the viral recipe, then call
+   evaluate_draft(target, title, ...) and iterate until the acceptance verdict is
+   "likely_accepted" and the viral-recipe match is high.
+
+Present a concise plan: which subreddit and why (traffic + safety + reach), the
+recommended format/flair/title style with example titles, the best posting time,
+and the draft's predicted score. Be honest that figures are estimates.
+""".strip()
+
+    return [
+        Message(role="user", content=f"Help me grow my Reddit account by posting about: {topic}"),
+        Message(role="assistant", content=guide),
+    ]
 
 
 def main():
