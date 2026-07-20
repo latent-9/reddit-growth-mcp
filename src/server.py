@@ -1,4 +1,4 @@
-"""Reddit Analyzer — MCP server.
+"""Reddit Growth MCP — MCP server.
 
 Direct-tool MCP server for analyzing subreddits and post performance:
 - find_target_subreddits : discover & rank high-traffic communities by topic
@@ -39,9 +39,9 @@ from src.tools.posts import fetch_multiple_subreddits, fetch_subreddit_posts
 from src.tools.search import search_in_subreddit
 
 mcp = FastMCP(
-    "Reddit Analyzer",
+    "Reddit Growth MCP",
     instructions="""
-Reddit Analyzer — grow a Reddit account by posting where you'll be accepted and
+Reddit Growth MCP — grow a Reddit account by posting where you'll be accepted and
 seen. Works without Reddit credentials (data from the Arctic Shift archive).
 
 Fast path (recommended):
@@ -319,7 +319,7 @@ You are helping the user grow their Reddit account by posting about: "{topic}".
 
 {subs_line}
 
-Follow this workflow using the Reddit Analyzer tools (all work without credentials):
+Follow this workflow using the Reddit Growth MCP tools (all work without credentials):
 
 1. growth_plan(subreddits=[...]) — get the safest strong target, cross-post
    options, the viral recipe, and best posting times in one call.
@@ -343,7 +343,7 @@ and the draft's predicted score. Be honest that figures are estimates.
 
 def main():
     """Entry point — runs over stdio transport."""
-    print("Reddit Analyzer MCP starting...", flush=True)
+    print("Reddit Growth MCP starting...", flush=True)
     try:
         initialize_reddit_client()
         print("Reddit client ready.", flush=True)

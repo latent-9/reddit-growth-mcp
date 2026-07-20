@@ -1,4 +1,4 @@
-"""Reddit Analyzer resources — server info endpoint."""
+"""Reddit Growth MCP resources — server info endpoint."""
 
 from typing import Any, Dict
 
@@ -12,7 +12,7 @@ def register_resources(mcp, reddit: praw.Reddit) -> None:
     def get_server_info() -> Dict[str, Any]:
         """Server capabilities and usage overview."""
         return {
-            "name": "Reddit Analyzer",
+            "name": "Reddit Growth MCP",
             "version": "0.2.0",
             "description": (
                 "Analyze subreddits and post performance: find high-traffic "

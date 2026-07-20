@@ -1,4 +1,4 @@
-"""Command-line interface for Reddit Analyzer.
+"""Command-line interface for Reddit Growth MCP.
 
 Run analyses straight from the terminal — no MCP client needed. Most commands
 work without Reddit credentials (data comes from the Arctic archive); when
@@ -394,13 +394,13 @@ def _run_plan(args, reddit) -> None:
 
 _EPILOG = """
 examples:
-  reddit-analyzer compare singularity LocalLLaMA mcp      rank subs for growth
-  reddit-analyzer plan singularity LocalLLaMA --tz 7      full growth plan
-  reddit-analyzer patterns Fedora --time month           what performs + viral recipe
-  reddit-analyzer insight mcp                             discussion depth
-  reddit-analyzer traffic LocalLLaMA                      activity (posts/day)
-  reddit-analyzer draft ClaudeAI --title "..." --type image
-  reddit-analyzer fit singularity mcp --title "..." --type video
+  reddit-growth compare singularity LocalLLaMA mcp      rank subs for growth
+  reddit-growth plan singularity LocalLLaMA --tz 7      full growth plan
+  reddit-growth patterns Fedora --time month           what performs + viral recipe
+  reddit-growth insight mcp                             discussion depth
+  reddit-growth traffic LocalLLaMA                      activity (posts/day)
+  reddit-growth draft ClaudeAI --title "..." --type image
+  reddit-growth fit singularity mcp --title "..." --type video
 
 Most commands work WITHOUT Reddit credentials (data from the Arctic archive).
 Add REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env to unlock official rules and
@@ -415,7 +415,7 @@ _TZ_HELP = "Local UTC offset in hours to also show posting times (e.g. 7 for WIB
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(
-        prog="reddit-analyzer",
+        prog="reddit-growth",
         description="Analyze subreddits and post patterns to grow a Reddit account.",
         epilog=_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,

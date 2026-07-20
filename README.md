@@ -1,4 +1,4 @@
-# Reddit Analyzer
+# Reddit Growth MCP
 
 A toolkit for analyzing subreddits and the patterns behind posts that get
 accepted and perform well. It helps you choose the right communities and shape
@@ -100,7 +100,7 @@ Add `--json` to any command for raw output.
 Ranking a set of AI/dev communities for account growth (credential-free):
 
 ```
-$ reddit-analyzer compare singularity LocalLLaMA unixporn linux mcp --window 30d
+$ reddit-growth compare singularity LocalLLaMA unixporn linux mcp --window 30d
 
 SUBREDDIT COMPARISON  (ranked by growth)
 subreddit             growth   viral  posts/day  comments  removal    safety  conf
@@ -116,7 +116,7 @@ with high viral ceilings and real discussion; r/linux is active but strict
 (55% of posts removed). Turning that into a plan:
 
 ```
-$ reddit-analyzer plan singularity LocalLLaMA unixporn mcp --tz 7
+$ reddit-growth plan singularity LocalLLaMA unixporn mcp --tz 7
 
 GROWTH PLAN
 Target: r/singularity
@@ -144,7 +144,7 @@ current numbers.
 Register the server once (Claude Code shown):
 
 ```bash
-claude mcp add reddit-analyzer -- uv run python -m src.server
+claude mcp add reddit-growth-mcp -- uv run python -m src.server
 ```
 
 Then ask in natural language, for example "analyze what performs in r/Fedora"

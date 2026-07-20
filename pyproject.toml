@@ -1,5 +1,5 @@
 [project]
-name = "reddit-analyzer"
+name = "reddit-growth-mcp"
 version = "0.2.0"
 description = "Subreddit traffic and post-pattern analysis toolkit"
 readme = "README.md"
@@ -26,9 +26,9 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/latent-9/reddit-analyzer"
-Repository = "https://github.com/latent-9/reddit-analyzer"
-Issues = "https://github.com/latent-9/reddit-analyzer/issues"
+Homepage = "https://github.com/latent-9/reddit-growth-mcp"
+Repository = "https://github.com/latent-9/reddit-growth-mcp"
+Issues = "https://github.com/latent-9/reddit-growth-mcp/issues"
 
 [project.optional-dependencies]
 dev = [
@@ -50,8 +50,8 @@ select = ["E", "F", "I"]
 "src/cli.py" = ["E402"]
 
 [project.scripts]
-reddit-analyzer = "src.server:main"
-reddit-analyzer-cli = "src.cli:run"
+reddit-growth-mcp = "src.server:main"
+reddit-growth = "src.cli:run"
 
 [build-system]
 requires = ["hatchling"]

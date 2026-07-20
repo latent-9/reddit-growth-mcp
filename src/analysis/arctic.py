@@ -24,7 +24,7 @@ import urllib.request
 from typing import Any, Dict, List, Optional
 
 ARCTIC_BASE = "https://arctic-shift.photon-reddit.com"
-_UA = "reddit-analyzer/0.1 (archive diff)"
+_UA = "reddit-growth-mcp/0.1 (archive diff)"
 
 # Per-process response cache. Compare/patterns/draft often hit the same
 # subreddit windows; caching avoids redundant calls and rate-limit hits.
