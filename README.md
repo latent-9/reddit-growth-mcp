@@ -66,10 +66,12 @@ work via the archive.
 ## Command-line usage
 
 ```bash
+uv run python -m src.cli traffic LocalLLaMA
 uv run python -m src.cli patterns Fedora --time month
 uv run python -m src.cli patterns commandline --metric discussion
 uv run python -m src.cli acceptance technology
 uv run python -m src.cli compare Fedora gnome linux
+uv run python -m src.cli plan singularity LocalLLaMA mcp --tz 7
 uv run python -m src.cli draft ClaudeAI --title "I built an ASCII art tool" --type image
 ```
 
@@ -82,6 +84,50 @@ Add `--json` to any command for raw output.
 - `discussion`: comments per upvote, a proxy for genuine engagement rather than
   drive-by upvotes.
 - `quality`: upvotes damped by a clickbait penalty.
+
+## Example analysis
+
+Ranking a set of AI/dev communities for account growth (credential-free):
+
+```
+$ reddit-analyzer compare singularity LocalLLaMA unixporn linux mcp --window 30d
+
+SUBREDDIT COMPARISON  (ranked by growth)
+subreddit             growth   viral  posts/day  comments  removal    safety  conf
+  r/singularity         222.9   629.1       48.7        22     12%      safe  ok
+  r/LocalLLaMA           64.3   199.8       80.2        19     12%      safe  ok
+  r/unixporn             53.4   120.0       38.5         2     28%  moderate  ok
+  r/linux                12.8    42.6       60.9        10     55%    strict  ok
+  r/mcp                   1.5     2.8       45.6         1     30%  moderate  ok
+```
+
+Reading it: r/singularity and r/LocalLLaMA are safe (low removal) and active,
+with high viral ceilings and real discussion; r/linux is active but strict
+(55% of posts removed). Turning that into a plan:
+
+```
+$ reddit-analyzer plan singularity LocalLLaMA unixporn mcp --tz 7
+
+GROWTH PLAN
+Target: r/singularity
+  growth 222.9 · viral 629.1 · 48.7 posts/day · 22 comments · 12% removed (safe)
+
+Also worth posting to (safe, tailor per sub)
+  r/LocalLLaMA   growth 64.3 · 12% removed (safe)
+  r/unixporn     growth 53.4 · 28% removed (moderate)
+
+What to post (viral recipe)
+  Format : link
+  Flair  : AI
+  Length : ~97.5 chars, no clickbait
+
+When to post
+  08:00 UTC = 15:00 local / 15:00 UTC = 22:00 local
+  Days: Saturday, Friday
+```
+
+Figures are estimates from a sample and will shift over time; run it live for
+current numbers.
 
 ## Use as an MCP server
 
