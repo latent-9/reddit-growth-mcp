@@ -10,6 +10,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Union
 
 from .helpers import clean_subreddit_name, features_from_arctic, safe_mean, percentile
+from .constants import (
+    VIRAL_PERCENTILE, SAFETY_SAFE_MAX, SAFETY_MODERATE_MAX,
+    LOW_CONFIDENCE_FILTERED_RATIO,
+)
 from . import arctic
 
 
@@ -26,7 +30,7 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     removal_rate = round(len(removed) / considered, 3) if considered else 0.0
     # AutoMod-filtered posts are uncertain; a high share means low confidence.
     filtered_ratio = round(len(filtered) / len(rows), 2) if rows else 0.0
-    low_confidence = filtered_ratio > 0.3 or considered < 10
+    low_confidence = filtered_ratio > LOW_CONFIDENCE_FILTERED_RATIO or considered < 10
 
     live_scores = [r["score"] for r in live]
     median_score = sorted(live_scores)[len(live_scores) // 2] if live_scores else 0
@@ -36,7 +40,7 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     opportunity = round(median_score * (1 - removal_rate), 1)
     # Viral potential: the upside (90th-percentile reach) a strong post can hit
     # here, discounted by removal risk. This is what matters for going viral.
-    ceiling = percentile(sorted(live_scores), 90) if live_scores else 0
+    ceiling = percentile(sorted(live_scores), VIRAL_PERCENTILE) if live_scores else 0
     viral_potential = round(ceiling * (1 - removal_rate), 1)
 
     media = {}
@@ -45,8 +49,8 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     top_media = max(media, key=media.get) if media else None
 
     # Safety = how likely a rule-abiding post survives (mean-mod risk).
-    safety = ("safe" if removal_rate < 0.15
-              else "moderate" if removal_rate < 0.35 else "strict")
+    safety = ("safe" if removal_rate < SAFETY_SAFE_MAX
+              else "moderate" if removal_rate < SAFETY_MODERATE_MAX else "strict")
 
     return {
         "subreddit": name,

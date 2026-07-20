@@ -20,6 +20,7 @@ from .helpers import (
     safe_mean, winning_keywords, percentile, metric_value, engagement_ratio,
     trimmed_mean,
 )
+from .constants import STRONG_PERCENTILE, VIRAL_PERCENTILE
 from . import arctic
 
 # time_filter -> Arctic lookback window (label, days) for the archive source.
@@ -253,8 +254,8 @@ def analyze_post_patterns(
 
     # "Strong post" threshold = 75th percentile of the metric. Timing buckets
     # rank by hit_rate (share of strong posts), which is robust to outliers.
-    strong = percentile(sorted(vals), 75)
-    strong90 = percentile(sorted(vals), 90)  # top-decile = "viral" for the DNA profile
+    strong = percentile(sorted(vals), STRONG_PERCENTILE)
+    strong90 = percentile(sorted(vals), VIRAL_PERCENTILE)  # top-decile = "viral"
 
     def _by_hit(rows_, key, min_n):
         stats = _group_stats(rows_, key, perf, min_n=min_n, threshold=strong)
