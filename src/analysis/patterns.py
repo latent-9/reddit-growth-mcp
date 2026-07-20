@@ -9,6 +9,7 @@ guidance doesn't push you toward it. Correlations from a sample, not the algorit
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import praw
@@ -150,7 +151,22 @@ def analyze_post_patterns(
     perf = "_perf"
     vals = [r[perf] for r in rows]
     n = len(rows)
+
+    # Actual time coverage: a high-volume sub may only span a few days even for
+    # a 'month' request, which matters for interpreting the results.
+    times = [r["created_utc"] for r in rows if r.get("created_utc")]
+    span_days = round((max(times) - min(times)) / 86400.0, 1) if len(times) >= 2 else 0.0
+    date_range = None
+    if times:
+        date_range = {
+            "oldest": datetime.fromtimestamp(min(times), tz=timezone.utc).strftime("%Y-%m-%d"),
+            "newest": datetime.fromtimestamp(max(times), tz=timezone.utc).strftime("%Y-%m-%d"),
+        }
+
+    # Confidence combines sample size and how well the window was covered.
     confidence = "high" if n >= 80 else "medium" if n >= 30 else "low"
+    if confidence == "high" and span_days and span_days < 3:
+        confidence = "medium"  # lots of posts but only a sliver of time
 
     # Hours need a looser min (naturally sparse); blocks/days/categories tighter.
     best_hours = [{"hour_utc": b["value"], "median": b["median"], "mean": b["mean"],
@@ -166,6 +182,8 @@ def analyze_post_patterns(
         "subreddit": name,
         "sampled": n,
         "confidence": confidence,
+        "sample_span_days": span_days,
+        "sample_date_range": date_range,
         "source": source_label,
         "metric": metric,
         "score_stats": {"mean": safe_mean(vals), "median": _median(vals), "max": max(vals)},

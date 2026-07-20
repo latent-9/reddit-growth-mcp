@@ -55,6 +55,9 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
         print("Error:", d["error"]); return
     _hr(f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, "
         f"n={d['sampled']}, confidence={d.get('confidence')})")
+    rng = d.get("sample_date_range")
+    if rng:
+        print(f"Coverage: {rng['oldest']} to {rng['newest']} ({d.get('sample_span_days')} days)")
     st = d["score_stats"]
     print(f"{d.get('metric','score')}: median {st['median']} · mean {st['mean']} · max {st['max']}")
     print("(ranked by median = typical post; mean shown for reference)")
