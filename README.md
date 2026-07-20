@@ -12,6 +12,28 @@ It runs as an MCP server (for use inside Claude, Cursor, and other MCP clients)
 and as a standalone command-line tool. Most analysis works without any Reddit
 API credentials, because it reads from a public historical archive.
 
+One command turns a list of subreddits into a plan — where to post, what to
+post, and when:
+
+```text
+$ reddit-growth plan singularity LocalLLaMA mcp --tz 7
+
+GROWTH PLAN
+Target: r/singularity
+  growth 222.9 · viral 629.1 · 48 posts/day · 23 comments · 12% removed (safe)
+  discussion depth (insight): medium (30% substantive)
+
+Also worth posting to (safe, tailor per sub)
+  r/LocalLLaMA   growth 64.3 · 12% removed (safe)
+
+What to post (viral recipe)
+  Format : image      Flair : AI      Length : ~97 chars, no clickbait
+  Words  : open, kimi, deepseek
+
+When to post
+  08:00 UTC = 15:00 local / 15:00 UTC = 22:00 local   ·   Days: Friday, Saturday
+```
+
 ## Quick start
 
 Requirements: Python 3.11+ and [uv](https://docs.astral.sh/uv/). No Reddit
