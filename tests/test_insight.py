@@ -34,3 +34,18 @@ def test_skips_removed_and_empty(monkeypatch):
 def test_no_comments(monkeypatch):
     monkeypatch.setattr(insight.arctic, "fetch_recent_comments", lambda *a, **k: [])
     assert "error" in insight.analyze_insight("empty")
+
+
+def test_sentiment_supportive(monkeypatch):
+    bodies = ["this is great and helpful, thanks"] * 6 + ["neutral statement here"] * 2
+    monkeypatch.setattr(insight.arctic, "fetch_recent_comments", lambda *a, **k: _comments(bodies))
+    out = insight.analyze_insight("nice")
+    assert out["sentiment"] == "supportive"
+    assert out["positivity_ratio"] == 1.0
+
+
+def test_sentiment_critical(monkeypatch):
+    bodies = ["this is terrible and useless, broken"] * 6 + ["ok"] * 2
+    monkeypatch.setattr(insight.arctic, "fetch_recent_comments", lambda *a, **k: _comments(bodies))
+    out = insight.analyze_insight("mean")
+    assert out["sentiment"] == "critical"

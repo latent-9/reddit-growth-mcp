@@ -265,6 +265,33 @@ def engagement_ratio(score: int, num_comments: int) -> float:
     return round(num_comments / max(score, 1), 3)
 
 
+# Lightweight sentiment lexicon (heuristic, not an ML model). Directional only.
+_POSITIVE_WORDS = set(
+    "great awesome love loved thanks thank nice helpful amazing good excellent "
+    "impressive cool works working solved appreciate brilliant perfect best "
+    "beautiful clean useful fantastic wonderful glad happy agree agreed based "
+    "goated fire underrated congrats congratulations".split()
+)
+_NEGATIVE_WORDS = set(
+    "bad terrible hate hated useless broken wrong awful scam trash garbage stupid "
+    "worst disappointing fail failed buggy slow overrated overhyped nonsense "
+    "misleading clickbait spam waste dumb annoying ridiculous horrible sucks "
+    "cringe disagree wtf".split()
+)
+_WORD = re.compile(r"[a-z']+")
+
+
+def sentiment_counts(text: str) -> tuple:
+    """Return (positive_hits, negative_hits) for a comment body (lexicon-based)."""
+    pos = neg = 0
+    for w in _WORD.findall((text or "").lower()):
+        if w in _POSITIVE_WORDS:
+            pos += 1
+        elif w in _NEGATIVE_WORDS:
+            neg += 1
+    return pos, neg
+
+
 def metric_value(row: Dict[str, Any], metric: str = "score") -> float:
     """Pluggable performance metric for a post feature row.
 

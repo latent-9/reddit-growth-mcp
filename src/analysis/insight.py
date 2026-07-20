@@ -12,7 +12,7 @@ from typing import Any, Dict, List
 
 from . import arctic
 from .constants import INSIGHT_HIGH_MEDIAN_CHARS, INSIGHT_LOW_MEDIAN_CHARS, INSIGHT_SUBSTANTIVE_CHARS
-from .helpers import clean_subreddit_name
+from .helpers import clean_subreddit_name, sentiment_counts
 
 _SKIP_BODIES = {"[removed]", "[deleted]", ""}
 
@@ -58,6 +58,25 @@ def analyze_insight(
         else "medium"
     )
 
+    # Heuristic sentiment: is the discussion supportive or critical?
+    pos_comments = neg_comments = 0
+    for b in bodies:
+        pos, neg = sentiment_counts(b)
+        if pos > neg:
+            pos_comments += 1
+        elif neg > pos:
+            neg_comments += 1
+    polarized = pos_comments + neg_comments
+    positivity = round(pos_comments / polarized, 2) if polarized else None
+    if positivity is None:
+        sentiment = "neutral"
+    elif positivity >= 0.6:
+        sentiment = "supportive"
+    elif positivity <= 0.4:
+        sentiment = "critical"
+    else:
+        sentiment = "mixed"
+
     return {
         "subreddit": name,
         "sampled_comments": len(bodies),
@@ -65,6 +84,8 @@ def analyze_insight(
         "median_comment_chars": median_chars,
         "median_comment_words": _median(words),
         "substantive_ratio": substantive_ratio,
+        "sentiment": sentiment,
+        "positivity_ratio": positivity,
         "note": (
             f"Insight = discussion depth. {substantive_ratio:.0%} of comments are "
             f"substantive (>={INSIGHT_SUBSTANTIVE_CHARS} chars). Credential-free "

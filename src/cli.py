@@ -297,6 +297,12 @@ def _print_insight(d: dict) -> None:
         f"  median comment {d['median_comment_chars']} chars / {d['median_comment_words']} words · "
         f"{d['substantive_ratio']:.0%} substantive (sample {d['sampled_comments']})"
     )
+    pr = d.get("positivity_ratio")
+    print(
+        f"  sentiment: {d.get('sentiment')}"
+        + (f" ({pr:.0%} of opinionated comments positive)" if pr is not None else "")
+        + "  [heuristic]"
+    )
 
 
 def _plan_markdown(plan: dict, tz: float) -> str:
