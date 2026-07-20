@@ -45,6 +45,32 @@ def _hr(title: str) -> None:
     print("─" * min(len(title), 60))
 
 
+def _print_unavailable(d: dict, what: str) -> None:
+    """Render a section-level failure as a clear note instead of a raw 'Error:'.
+
+    Used by the report/section printers so a strict or unreachable sub reads as
+    a plain explanation, not a stack-trace-flavored error line.
+    """
+    sub = d.get("subreddit", "this sub")
+    err = (d.get("error") or "").lower()
+    if "no posts sampled" in err or "no archived posts" in err:
+        msg = (
+            f"Not enough posts to analyze {what} for r/{sub} — the archive sample "
+            "came back empty. Usually a sub that removes/filters most posts, or one "
+            "too small or new. Add Reddit credentials for a live read."
+        )
+    elif "archive unavailable" in err:
+        msg = (
+            f"Couldn't reach the Arctic archive for r/{sub} ({what}). It may be "
+            "rate-limited — retry shortly, or add Reddit credentials to fall back "
+            "on the live source."
+        )
+    else:
+        msg = f"Couldn't compute {what} for r/{sub}: {d.get('error')}"
+    print(f"\n\033[1m⚠ {what.upper()} unavailable · r/{sub}\033[0m")
+    print(msg)
+
+
 def _fmt_hour(hour_utc: int, tz: float) -> str:
     """Render an hour as UTC, plus local time when a tz offset is given."""
     if not tz:
@@ -56,7 +82,7 @@ def _fmt_hour(hour_utc: int, tz: float) -> str:
 
 def _print_patterns(d: dict, tz: float = 0.0) -> None:
     if "error" in d:
-        print("Error:", d["error"])
+        _print_unavailable(d, "patterns")
         return
     _hr(
         f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, "
@@ -152,7 +178,7 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
 
 def _print_acceptance(d: dict) -> None:
     if "error" in d:
-        print("Error:", d["error"])
+        _print_unavailable(d, "acceptance")
         return
     _hr(f"ACCEPTANCE · r/{d['subreddit']}  ({d['detection_method']}, reliability: {d.get('reliability')})")
     print(
