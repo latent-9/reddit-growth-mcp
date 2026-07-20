@@ -8,8 +8,7 @@ Every number returned here is clearly labelled as an estimate.
 
 from __future__ import annotations
 
-import time
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Union
 
 import praw
 from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
@@ -191,12 +190,7 @@ def find_target_subreddits(
 
     results: List[Dict[str, Any]] = []
     total = len(seen)
-    for i, (key, entry) in enumerate(seen.items()):
-        if ctx:
-            try:
-                import asyncio  # progress is best-effort
-            except Exception:
-                pass
+    for key, entry in seen.items():
         est = estimate_subreddit_traffic(key, reddit, sample_size=25)
         if "error" in est:
             continue
