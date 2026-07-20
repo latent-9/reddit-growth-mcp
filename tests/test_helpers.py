@@ -12,6 +12,7 @@ from src.analysis.helpers import (
     extract_title_features,
     features_from_arctic,
     is_recurring_thread,
+    leading_bracket_tag,
     metric_value,
     percentile,
     rank_percentile,
@@ -143,6 +144,13 @@ def test_is_recurring_thread():
     # Normal project posts are not flagged.
     assert not is_recurring_thread("I built an ASCII art generator")
     assert not is_recurring_thread("[Hyprland] my first rice")
+
+
+def test_leading_bracket_tag():
+    assert leading_bracket_tag("[KDE] my first rice") == "KDE"
+    assert leading_bracket_tag("  [New Model] Kimi K3") == "New Model"
+    assert leading_bracket_tag("No tag here") is None
+    assert leading_bracket_tag("Tag not [leading]") is None
 
 
 def test_trimmed_mean():

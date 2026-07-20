@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import praw
 
 from .acceptance import analyze_acceptance
-from .helpers import clickbait_score, extract_title_features
+from .helpers import clickbait_score, extract_title_features, leading_bracket_tag
 from .patterns import analyze_post_patterns
 
 
@@ -204,6 +204,9 @@ def _viral_alignment(title: str, post_type: str, flair, patterns: Dict[str, Any]
     for rk, feat in [("has_number", "has_number"), ("showcase", "is_showcase"), ("question", "is_question")]:
         if rc["title"].get(rk, {}).get("overrepresented"):
             checks[rk] = bool(tf.get(feat))
+    tag = rc.get("title_tag", {})
+    if tag.get("share", 0) >= 0.3:
+        checks["bracket_tag"] = leading_bracket_tag(title) is not None
     kws = rc.get("keywords", [])
     if kws:
         checks["keyword"] = any(w in title.lower() for w in kws)
@@ -219,6 +222,7 @@ def _viral_alignment(title: str, post_type: str, flair, patterns: Dict[str, Any]
             "media": rc["media_type"]["value"],
             "flair": rc["flair"]["value"],
             "time_block_utc": rc["time_block_utc"]["value"],
+            "title_tags": tag.get("common", []),
             "keywords": kws[:6],
         },
     }

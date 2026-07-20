@@ -118,6 +118,10 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
         print(f"  Media : {rc['media_type']['value']} ({rc['media_type']['share']:.0%} of viral)")
         if rc["flair"]["value"]:
             print(f"  Flair : {rc['flair']['value']} ({rc['flair']['share']:.0%})")
+        tag = rc.get("title_tag", {})
+        if tag.get("share", 0) >= 0.3 and tag.get("common"):
+            tags = ", ".join(f"[{t}]" for t in tag["common"])
+            print(f"  Tag   : prefix title with {tags} ({tag['share']:.0%} of viral do)")
         print(f"  Time  : {rc['time_block_utc']['value']} ({rc['time_block_utc']['share']:.0%})")
         t = rc["title"]
         traits = [

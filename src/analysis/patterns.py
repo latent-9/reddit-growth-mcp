@@ -8,7 +8,7 @@ guidance doesn't push you toward it. Correlations from a sample, not the algorit
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List
 
@@ -21,6 +21,7 @@ from .helpers import (
     clean_subreddit_name,
     engagement_ratio,
     features_from_arctic,
+    leading_bracket_tag,
     metric_value,
     percentile,
     safe_mean,
@@ -180,6 +181,12 @@ def _viral_profile(rows: List[Dict[str, Any]], perf: str, threshold: float) -> D
     }
     kws = [k["word"] for k in winning_keywords(viral, top_frac=0.6, min_count=2, score_key=perf)][:8]
 
+    # Leading [bracket] tag convention (e.g. [KDE], [New Model]).
+    tags = [leading_bracket_tag(r["title"]) for r in viral]
+    tags = [t for t in tags if t]
+    tag_share = round(len(tags) / len(viral), 2)
+    common_tags = [t for t, _ in Counter(tags).most_common(3)]
+
     return {
         "available": True,
         "viral_threshold": threshold,
@@ -188,6 +195,7 @@ def _viral_profile(rows: List[Dict[str, Any]], perf: str, threshold: float) -> D
             "media_type": {"value": media, "share": media_share},
             "flair": {"value": flair, "share": flair_share},
             "time_block_utc": {"value": block, "share": block_share},
+            "title_tag": {"share": tag_share, "common": common_tags},
             "title": title,
             "keywords": kws,
         },

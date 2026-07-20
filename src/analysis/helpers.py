@@ -66,6 +66,19 @@ def is_recurring_thread(title: str) -> bool:
     return bool(_MEGATHREAD.search(title or ""))
 
 
+_LEADING_TAG = re.compile(r"^\s*\[([^\]]{1,30})\]")
+
+
+def leading_bracket_tag(title: str):
+    """Return the tag inside a leading ``[...]`` if present, else None.
+
+    Many communities prefix titles with a category tag (e.g. ``[KDE]``,
+    ``[New Model]``); this extracts it so we can detect that convention.
+    """
+    m = _LEADING_TAG.match(title or "")
+    return m.group(1).strip() if m else None
+
+
 def classify_removal(submission: Any) -> str:
     """Classify how a post was removed, best-effort without mod permissions.
 
