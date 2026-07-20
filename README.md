@@ -1,5 +1,9 @@
 # Reddit Growth MCP
 
+[![PyPI](https://img.shields.io/pypi/v/reddit-growth-mcp)](https://pypi.org/project/reddit-growth-mcp/)
+[![CI](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A toolkit for analyzing subreddits and the patterns behind posts that get
 accepted and perform well. It helps you choose the right communities and shape
 posts that fit each one, using real data rather than guesswork.
@@ -12,6 +16,16 @@ API credentials, because it reads from a public historical archive.
 
 Requirements: Python 3.11+ and [uv](https://docs.astral.sh/uv/). No Reddit
 account or API keys are needed to get started.
+
+Install from PyPI:
+
+```bash
+uvx reddit-growth-mcp                            # run the MCP server instantly
+pipx install reddit-growth-mcp                   # or install the CLI + server
+reddit-growth plan singularity LocalLLaMA mcp    # your first growth plan
+```
+
+Or from a clone (for development):
 
 ```bash
 uv sync                                                    # install dependencies
@@ -163,7 +177,7 @@ current numbers.
 Register the server once (Claude Code shown):
 
 ```bash
-claude mcp add reddit-growth-mcp -- uv run python -m src.server
+claude mcp add reddit-growth-mcp -- uvx reddit-growth-mcp
 ```
 
 Then ask in natural language, for example "analyze what performs in r/Fedora"
