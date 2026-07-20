@@ -21,15 +21,27 @@ from .helpers import (
 )
 from . import arctic
 
-# time_filter -> Arctic lookback window for the archive source.
+# time_filter -> Arctic lookback window (label, days) for the archive source.
 _ARCHIVE_WINDOW = {"day": "7d", "week": "21d", "month": "60d", "year": "365d", "all": "365d"}
+_WINDOW_DAYS = {"day": 7, "week": 21, "month": 60, "year": 365, "all": 365}
 _VALID_METRICS = {"score", "comments", "discussion", "quality"}
 
 
 def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str, Any]]:
-    """Pattern rows from the Arctic archive (no Reddit creds needed)."""
-    window = _ARCHIVE_WINDOW.get(time_filter, "60d")
-    posts = arctic.fetch_many_posts(name, after=window, before="2d", target=max(limit, 100))
+    """Pattern rows from the Arctic archive (no Reddit creds needed).
+
+    Short windows use straight newest-first paging; longer windows (month+) use
+    stratified sampling so the sample represents the whole period, not just the
+    last few days of a high-volume sub.
+    """
+    if time_filter in ("month", "year", "all"):
+        window_days = _WINDOW_DAYS.get(time_filter, 60)
+        slices = 6 if window_days >= 300 else 4
+        posts = arctic.fetch_stratified(name, window_days=window_days,
+                                        slices=slices, per_slice=max(limit // slices, 40))
+    else:
+        posts = arctic.fetch_many_posts(name, after=_ARCHIVE_WINDOW.get(time_filter, "60d"),
+                                        before="2d", target=max(limit, 100))
     return [features_from_arctic(p) for p in posts
             if not p.get("stickied") and p.get("removed_by_category") is None]
 

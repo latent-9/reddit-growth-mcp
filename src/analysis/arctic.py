@@ -142,6 +142,43 @@ def fetch_many_posts(
     return out[:target]
 
 
+def fetch_stratified(
+    subreddit: str,
+    window_days: int = 60,
+    exclude_recent_days: int = 2,
+    slices: int = 4,
+    per_slice: int = 50,
+    delay: float = 1.0,
+) -> List[Dict[str, Any]]:
+    """Sample evenly across the window instead of only the newest posts.
+
+    For high-volume subs the newest N posts cover just a few days, biasing
+    analysis toward recent trends. This splits the window into equal time
+    slices and pulls from each, giving representative coverage of the period.
+    """
+    out: List[Dict[str, Any]] = []
+    seen: set = set()
+    step = max((window_days - exclude_recent_days) / slices, 1)
+    for i in range(slices):
+        newer = int(round(exclude_recent_days + step * i))
+        older = int(round(exclude_recent_days + step * (i + 1)))
+        if older <= newer:
+            older = newer + 1
+        try:
+            batch = fetch_recent_posts(subreddit, after=f"{older}d", before=f"{newer}d",
+                                       limit=per_slice, sort="desc")
+        except ArcticUnavailable:
+            continue
+        for p in batch:
+            pid = p.get("id")
+            if pid and pid not in seen:
+                seen.add(pid)
+                out.append(p)
+        if i < slices - 1:
+            time.sleep(delay)
+    return out
+
+
 def aggregate_post_frequency(
     subreddit: str,
     after: str = "90d",
