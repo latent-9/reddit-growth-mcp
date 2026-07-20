@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.analysis.acceptance import analyze_acceptance as _analyze_acceptance
 from src.analysis.compare import compare_subreddits as _compare_subreddits
 from src.analysis.draft import evaluate_draft as _evaluate_draft
+from src.analysis.draft import evaluate_draft_across as _evaluate_draft_across
 from src.analysis.insight import analyze_insight as _analyze_insight
 from src.analysis.patterns import analyze_post_patterns as _analyze_post_patterns
 from src.analysis.plan import build_growth_plan as _build_growth_plan
@@ -174,6 +175,25 @@ def evaluate_draft(
     # Runs creds-free (archive removal + patterns); with creds it also checks
     # exact rule compliance.
     return _evaluate_draft(subreddit_name, title, reddit, body, post_type, flair, time_filter, ctx)
+
+
+@mcp.tool(
+    description=(
+        "Score one draft across several subreddits and rank by normalized fit "
+        "(size-fair percentile) vs raw reach. No creds needed."
+    ),
+    annotations={"readOnlyHint": True},
+)
+def evaluate_draft_across(
+    subreddits: Annotated[List[str], "Subreddits to compare the draft against"],
+    title: Annotated[str, "Draft post title"],
+    body: Annotated[str, "Draft self-text body (optional)"] = "",
+    post_type: Annotated[str, "text | image | video | link"] = "text",
+    flair: Annotated[Optional[str], "Intended flair (optional)"] = None,
+    time_filter: Annotated[str, "Pattern window: all|year|month|week"] = "month",
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    return _evaluate_draft_across(subreddits, title, reddit, body, post_type, flair, time_filter, ctx)
 
 
 @mcp.tool(

@@ -1,6 +1,7 @@
 """Unit tests for the data-driven draft predictor (no network)."""
 
-from src.analysis.draft import _check_compliance, _predict_performance
+from src.analysis import draft
+from src.analysis.draft import _check_compliance, _predict_performance, evaluate_draft_across
 
 # A synthetic patterns report where image posts and 'showcase' titles win big.
 PATTERNS = {
@@ -65,3 +66,32 @@ def test_compliance_flags_missing_required_flair():
     acceptance = {"post_requirements": {"flair_required": True}, "account_gates": []}
     out = _check_compliance("title", "", "text", None, acceptance)
     assert any("Flair is required" in i for i in out["blocking_issues"])
+
+
+def test_evaluate_draft_across_ranks_by_fit_not_reach(monkeypatch):
+    # Small sub: post is top-percentile (fit 95) but low raw reach (30).
+    # Big sub: post is average (fit 40) but high raw reach (500).
+    canned = {
+        "Small": {
+            "subreddit": "Small",
+            "performance_score": 95,
+            "performance_band": "viral",
+            "projected_score": 30,
+            "acceptance_verdict": "likely_accepted",
+            "removal_rate_estimate": 0.05,
+            "viral_alignment": {"alignment_pct": 80},
+        },
+        "Big": {
+            "subreddit": "Big",
+            "performance_score": 40,
+            "performance_band": "average",
+            "projected_score": 500,
+            "acceptance_verdict": "likely_accepted",
+            "removal_rate_estimate": 0.1,
+            "viral_alignment": {"alignment_pct": 20},
+        },
+    }
+    monkeypatch.setattr(draft, "evaluate_draft", lambda name, *a, **k: canned[name])
+    out = evaluate_draft_across(["Small", "Big"], "a title")
+    assert out["best_fit"] == "Small"  # size-fair fit prefers the small sub
+    assert out["most_reach"] == "Big"  # raw reach prefers the big sub

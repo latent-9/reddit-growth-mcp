@@ -279,3 +279,54 @@ def evaluate_draft(
         "best_posting_days": patterns.get("best_posting_days", [])[:2],
         "disclaimer": "Prediction from public rules + sampled patterns. An estimate, not a guarantee.",
     }
+
+
+def evaluate_draft_across(
+    subreddits: List[str],
+    title: str,
+    reddit: praw.Reddit = None,
+    body: str = "",
+    post_type: str = "text",
+    flair: Optional[str] = None,
+    time_filter: str = "month",
+    ctx: Any = None,
+) -> Dict[str, Any]:
+    """Score one draft across several subreddits and rank by normalized fit.
+
+    fit_score is the draft's percentile within each sub's own score distribution
+    (size-independent, so small and large subs compare fairly); projected_score
+    is the raw expected reach. Ranking by fit answers "which community is my post
+    best suited to", independent of sub size.
+    """
+    results: List[Dict[str, Any]] = []
+    for name in subreddits:
+        r = evaluate_draft(name, title, reddit, body, post_type, flair, time_filter, ctx)
+        if "error" in r:
+            results.append({"subreddit": name, "error": r["error"]})
+            continue
+        va = r.get("viral_alignment") or {}
+        results.append(
+            {
+                "subreddit": r["subreddit"],
+                "fit_score": r["performance_score"],  # normalized percentile (size-fair)
+                "performance_band": r["performance_band"],
+                "projected_score": r["projected_score"],  # raw reach
+                "acceptance_verdict": r["acceptance_verdict"],
+                "removal_rate": r["removal_rate_estimate"],
+                "viral_match_pct": va.get("alignment_pct"),
+            }
+        )
+
+    ok = [r for r in results if "error" not in r]
+    ok.sort(key=lambda r: (r["fit_score"], r["projected_score"]), reverse=True)
+    by_reach = sorted(ok, key=lambda r: r["projected_score"], reverse=True)
+    return {
+        "ranked": ok,
+        "failed": [r for r in results if "error" in r],
+        "best_fit": ok[0]["subreddit"] if ok else None,
+        "most_reach": by_reach[0]["subreddit"] if by_reach else None,
+        "note": (
+            "fit_score = normalized percentile within each sub (fair across sizes); "
+            "projected_score = raw expected reach (favors bigger subs)."
+        ),
+    }

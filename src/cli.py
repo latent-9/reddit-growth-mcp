@@ -21,7 +21,7 @@ from dotenv import load_dotenv
 
 from src.analysis.acceptance import analyze_acceptance
 from src.analysis.compare import compare_subreddits
-from src.analysis.draft import evaluate_draft
+from src.analysis.draft import evaluate_draft, evaluate_draft_across
 from src.analysis.insight import analyze_insight
 from src.analysis.patterns import analyze_post_patterns
 from src.analysis.plan import build_growth_plan
@@ -269,6 +269,25 @@ def _print_traffic(d: dict) -> None:
     )
 
 
+def _print_fit(d: dict) -> None:
+    if "error" in d:
+        print("Error:", d["error"])
+        return
+    _hr("DRAFT FIT ACROSS SUBS (ranked by size-fair fit)")
+    print(f"{'subreddit':20} {'fit/100':>8} {'reach~':>8} {'viral%':>7} {'removal':>8}  verdict")
+    for r in d["ranked"]:
+        vm = r.get("viral_match_pct")
+        print(
+            f"  r/{r['subreddit']:17} {r['fit_score']:>8} {r['projected_score']:>8} "
+            f"{(str(vm) + '%') if vm is not None else '-':>7} {r['removal_rate']:>7.0%}  {r['acceptance_verdict']}"
+        )
+    for r in d.get("failed", []):
+        print(f"  r/{r['subreddit']:17} — {r['error']}")
+    if d.get("best_fit"):
+        print(f"\nBest fit (size-fair): r/{d['best_fit']}  ·  Most reach: r/{d.get('most_reach')}")
+    print(f"({d['note']})")
+
+
 def _print_insight(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"])
@@ -431,6 +450,12 @@ def main(argv=None) -> int:
     sd.add_argument("--flair", default=None)
     sd.add_argument("--tz", type=float, default=0.0, help="Local UTC offset for posting times")
 
+    sf = sub.add_parser("fit", help="Score one draft across subs, ranked by size-fair fit")
+    sf.add_argument("subreddits", nargs="+")
+    sf.add_argument("--title", required=True)
+    sf.add_argument("--type", default="text", dest="post_type")
+    sf.add_argument("--flair", default=None)
+
     args = p.parse_args(argv)
     reddit = _get_reddit()
     if reddit is None and args.cmd in {"patterns", "acceptance", "compare", "draft"}:
@@ -454,6 +479,9 @@ def main(argv=None) -> int:
     elif args.cmd == "insight":
         result = analyze_insight(args.subreddit, args.after)
         printer = _print_insight
+    elif args.cmd == "fit":
+        result = evaluate_draft_across(args.subreddits, args.title, reddit, "", args.post_type, args.flair)
+        printer = _print_fit
     elif args.cmd == "plan":
         _run_plan(args, reddit)
         return 0
