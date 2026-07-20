@@ -22,9 +22,10 @@ API credentials, because it reads from a public historical archive.
 | `analyze_post_patterns` | What performs in a sub: timing, media, title style, flair, keywords, by a configurable metric | No |
 | `analyze_acceptance` | Removal rate and what tends to get removed; official rules when credentials are present | No |
 | `compare_subreddits` | Rank subreddits by viral potential, with traffic (posts/day), discussion, removal risk, and a safety label | No |
+| `growth_plan` | One call: safest strong target, cross-post options, viral recipe, and best posting times | No |
 | `evaluate_draft` | Predict a draft's performance (0-100) and acceptance risk, with drivers and fixes | No |
+| `analyze_subreddit` | Estimate a subreddit's activity (posts/day); uses the archive without credentials | No |
 | `find_target_subreddits_tool` | Discover and rank subreddits for topics by estimated traffic | Yes |
-| `analyze_subreddit` | Estimate a subreddit's reach from public signals | Yes |
 | `fetch_posts`, `fetch_multiple`, `search_subreddit`, `fetch_comments` | Raw data access | Yes |
 
 The analysis tools are subreddit-agnostic. They have been exercised on
@@ -139,6 +140,11 @@ claude mcp add reddit-analyzer -- uv run python -m src.server
 
 Then ask in natural language, for example "analyze what performs in r/Fedora"
 or "will this title get accepted in r/linux?" The client calls the tools.
+
+For the full flow in one step, ask for a growth plan ("build a growth plan for
+r/singularity, r/LocalLLaMA, r/mcp") to invoke `growth_plan`, or select the
+`reddit_growth` prompt, which guides the assistant through finding a safe
+high-traffic subreddit and crafting a post that fits its viral recipe.
 
 To run the server directly over stdio:
 
