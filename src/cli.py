@@ -196,6 +196,11 @@ def main(argv=None) -> int:
     sc.add_argument("--window", default="60d")
     sc.add_argument("--sample", type=int, default=200)
 
+    sr = sub.add_parser("report", help="Full report: acceptance + patterns for a subreddit")
+    sr.add_argument("subreddit")
+    sr.add_argument("--time", default="month", choices=["day", "week", "month", "year", "all"])
+    sr.add_argument("--tz", type=float, default=0.0)
+
     sd = sub.add_parser("draft", help="Evaluate a post draft")
     sd.add_argument("subreddit")
     sd.add_argument("--title", required=True)
@@ -220,6 +225,15 @@ def main(argv=None) -> int:
     elif args.cmd == "draft":
         result = evaluate_draft(args.subreddit, args.title, reddit, args.body, args.post_type, args.flair)
         printer = _print_draft
+    elif args.cmd == "report":
+        acc = analyze_acceptance(args.subreddit, reddit)
+        pat = analyze_post_patterns(args.subreddit, reddit, "top", args.time, 200, "auto")
+        if args.json:
+            print(json.dumps({"acceptance": acc, "patterns": pat}, indent=2, default=str))
+        else:
+            _print_acceptance(acc)
+            _print_patterns(pat, args.tz)
+        return 0
     else:  # pragma: no cover
         p.error("unknown command")
 
