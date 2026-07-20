@@ -291,7 +291,7 @@ def main(argv=None) -> int:
     sc.add_argument("--window", default="60d")
     sc.add_argument("--sample", type=int, default=200)
     sc.add_argument("--rank-by", dest="rank_by", default="growth",
-                    choices=["growth", "viral", "opportunity"])
+                    choices=["growth", "viral", "opportunity", "insight"])
 
     sr = sub.add_parser("report", help="Full report: acceptance + patterns for a subreddit")
     sr.add_argument("subreddit")

@@ -99,7 +99,7 @@ def compare_subreddits(
         return {"error": "Provide at least one subreddit name"}
 
     sort_key = {"viral": "viral_potential", "opportunity": "opportunity_score",
-                "growth": "growth_score"}.get(rank_by, "growth_score")
+                "growth": "growth_score", "insight": "median_comments"}.get(rank_by, "growth_score")
     profiles = [_profile_subreddit(n, window, sample) for n in names]
     ranked = [p for p in profiles if "error" not in p]
     ranked.sort(key=lambda p: p[sort_key], reverse=True)
@@ -109,6 +109,7 @@ def compare_subreddits(
         "growth": "growth = typical reach + 0.3 × viral potential (both removal-adjusted)",
         "viral": "viral potential = 90th-percentile reach × (1 − removal rate)",
         "opportunity": "opportunity = median reach × (1 − removal rate)",
+        "insight": "insight = median comments per post (discussion depth)",
     }.get(rank_by, "growth")
     return {
         "ranked": ranked,

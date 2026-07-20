@@ -65,5 +65,16 @@ def test_ranking_and_rank_by(stub_arctic, monkeypatch):
     assert all("growth_score" in p for p in default["ranked"])
 
 
+def test_rank_by_insight(monkeypatch):
+    # A: high upvotes, few comments; B: modest upvotes, lots of comments.
+    a = [_post(f"a{i}", 500, comments=1) for i in range(10)]
+    b = [_post(f"b{i}", 30, comments=40) for i in range(10)]
+    calls = {"testA": a, "testB": b}
+    monkeypatch.setattr(compare.arctic, "fetch_many_posts",
+                        lambda name, *a2, **k: calls[name])
+    out = compare.compare_subreddits(["testA", "testB"], rank_by="insight")
+    assert out["best_pick"] == "testB"  # more discussion wins for insight
+
+
 def test_empty_input():
     assert "error" in compare.compare_subreddits([])
