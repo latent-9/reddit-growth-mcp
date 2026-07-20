@@ -6,6 +6,16 @@ semantic versioning.
 
 ## [Unreleased]
 
+### Viral optimization
+- Viral DNA profile: isolate the top-decile posts and report their shared
+  recipe (media, flair, time block, title traits, keywords) and which traits are
+  over-represented versus the rest.
+- `compare_subreddits` ranks by viral potential (90th-percentile reach adjusted
+  for removal risk) by default, so high-ceiling communities surface for a viral
+  goal; `rank_by` switches to typical-reach opportunity.
+- `evaluate_draft` reports a viral-recipe alignment score and the exact traits a
+  draft is missing to match what goes viral in the sub.
+
 ### Added
 - Credential-free operation for the core analysis tools via the Arctic Shift
   archive: `analyze_post_patterns`, `analyze_acceptance`, `compare_subreddits`,
