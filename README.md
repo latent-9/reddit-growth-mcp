@@ -21,7 +21,7 @@ API credentials, because it reads from a public historical archive.
 | --- | --- | --- |
 | `analyze_post_patterns` | What performs in a sub: timing, media, title style, flair, keywords, by a configurable metric | No |
 | `analyze_acceptance` | Removal rate and what tends to get removed; official rules when credentials are present | No |
-| `compare_subreddits` | Rank subreddits by opportunity (reach vs. removal risk) | No |
+| `compare_subreddits` | Rank subreddits by viral potential, with traffic (posts/day), discussion, removal risk, and a safety label | No |
 | `evaluate_draft` | Predict a draft's performance (0-100) and acceptance risk, with drivers and fixes | No |
 | `find_target_subreddits_tool` | Discover and rank subreddits for topics by estimated traffic | Yes |
 | `analyze_subreddit` | Estimate a subreddit's reach from public signals | Yes |
@@ -99,6 +99,20 @@ To run the server directly over stdio:
 ```bash
 uv run python -m src.server
 ```
+
+## Targeting workflow
+
+To find where to post for growth, `compare_subreddits` reports, per subreddit:
+
+- viral potential (90th-percentile reach adjusted for removal risk) and ceiling,
+- posts per day (a credential-free traffic proxy),
+- typical discussion (median comments),
+- removal rate and a safety label (safe / moderate / strict), so you can avoid
+  communities that remove most posts.
+
+A typical flow: `compare` to shortlist safe, high-traffic, high-ceiling subs,
+then `patterns` to read the viral recipe, then `evaluate_draft` to score a draft
+against it before posting.
 
 ## Accuracy and methodology
 
