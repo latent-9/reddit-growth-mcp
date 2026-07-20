@@ -1,0 +1,64 @@
+"""Unit tests for the compare module (arctic calls stubbed, no network)."""
+
+import pytest
+
+from src.analysis import compare
+
+
+def _post(pid, score, comments=0, removed=None, title="A normal project post",
+          created=1_700_000_000):
+    return {
+        "id": pid, "title": title, "selftext": "", "score": score,
+        "num_comments": comments, "created_utc": created, "url": "https://reddit.com/x",
+        "domain": "self.x", "is_self": True, "link_flair_text": "Show",
+        "removed_by_category": removed, "permalink": f"/r/x/comments/{pid}/",
+    }
+
+
+@pytest.fixture
+def stub_arctic(monkeypatch):
+    def _install(posts):
+        monkeypatch.setattr(compare.arctic, "fetch_many_posts",
+                            lambda *a, **k: posts)
+    return _install
+
+
+def test_profile_safety_and_viral(stub_arctic):
+    # 18 live posts (scores 10..180) + 2 mod-removed -> ~10% removal = safe.
+    posts = [_post(f"p{i}", (i + 1) * 10, comments=i) for i in range(18)]
+    posts += [_post("r1", 5, removed="moderator"), _post("r2", 5, removed="moderator")]
+    stub_arctic(posts)
+
+    out = compare.compare_subreddits(["testsub"], sample=50)
+    prof = out["ranked"][0]
+    assert prof["subreddit"] == "testsub"
+    assert prof["removal_rate"] == round(2 / 20, 3)
+    assert prof["safety"] == "safe"
+    assert prof["viral_ceiling"] > prof["median_score"]  # ceiling above typical
+    assert prof["viral_potential"] > 0
+
+
+def test_recurring_threads_excluded(stub_arctic):
+    posts = [_post(f"p{i}", 100, comments=5) for i in range(10)]
+    posts += [_post("mega", 9999, comments=9999, title="Daily Discussion Thread")]
+    stub_arctic(posts)
+    prof = compare.compare_subreddits(["testsub"], sample=50)["ranked"][0]
+    assert prof["sampled"] == 10  # megathread dropped
+
+
+def test_ranking_and_rank_by(stub_arctic, monkeypatch):
+    # Two subs: A high ceiling, B steady typical.
+    a = [_post(f"a{i}", s) for i, s in enumerate([1, 1, 1, 1, 1, 1, 1, 1, 500, 900])]
+    b = [_post(f"b{i}", 30) for i in range(10)]
+    calls = {"testA": a, "testB": b}
+    monkeypatch.setattr(compare.arctic, "fetch_many_posts",
+                        lambda name, *a2, **k: calls[name])
+
+    by_viral = compare.compare_subreddits(["testA", "testB"], rank_by="viral")
+    assert by_viral["best_pick"] == "testA"  # high ceiling wins for viral
+    by_opp = compare.compare_subreddits(["testA", "testB"], rank_by="opportunity")
+    assert by_opp["best_pick"] == "testB"  # steady typical wins for opportunity
+
+
+def test_empty_input():
+    assert "error" in compare.compare_subreddits([])
