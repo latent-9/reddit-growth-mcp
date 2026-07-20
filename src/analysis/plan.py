@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Union
 
 from .compare import compare_subreddits
+from .insight import analyze_insight
 from .patterns import analyze_post_patterns
 
 
@@ -43,6 +44,11 @@ def build_growth_plan(
         best_hours = pat.get("best_posting_hours_utc", [])[:3]
         best_days = pat.get("best_posting_days", [])[:2]
 
+    # Discussion depth of the chosen target (one extra comment sample).
+    ins = analyze_insight(target["subreddit"])
+    insight_tier = ins.get("insight_tier") if "error" not in ins else None
+    substantive_ratio = ins.get("substantive_ratio") if "error" not in ins else None
+
     return {
         "target": {
             "subreddit": target["subreddit"],
@@ -50,6 +56,8 @@ def build_growth_plan(
             "viral_potential": target.get("viral_potential"),
             "posts_per_day": target.get("posts_per_day"),
             "median_comments": target.get("median_comments"),
+            "insight_tier": insight_tier,
+            "substantive_ratio": substantive_ratio,
             "removal_rate": target.get("removal_rate"),
             "safety": target.get("safety"),
         },

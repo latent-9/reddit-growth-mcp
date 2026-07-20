@@ -295,6 +295,8 @@ def _run_plan(args, reddit) -> None:
         f"{t['posts_per_day']} posts/day · {t['median_comments']} comments · "
         f"{t['removal_rate']:.0%} removed ({t['safety']})"
     )
+    if t.get("insight_tier"):
+        print(f"  discussion depth (insight): {t['insight_tier']} ({t.get('substantive_ratio', 0):.0%} substantive)")
     if plan["avoided"]:
         print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in plan['avoided'])}")
 
