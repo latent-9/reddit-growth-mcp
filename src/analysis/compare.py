@@ -22,6 +22,11 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     if not posts:
         return {"subreddit": name, "error": "no archived posts (or rate-limited)"}
 
+    # Posting velocity as a traffic proxy (Arctic gives no subscriber counts).
+    times = sorted(p.get("created_utc", 0) or 0 for p in posts)
+    span_days = (times[-1] - times[0]) / 86400.0 if len(times) >= 2 else 0.0
+    posts_per_day = round(len(posts) / span_days, 1) if span_days > 0 else 0.0
+
     rows = [f for f in (features_from_arctic(p) for p in posts) if not f.get("recurring")]
     live = [r for r in rows if r["removal_status"] == "live"]
     removed = [r for r in rows if r["removal_status"] == "mod_removed"]
@@ -55,6 +60,7 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     return {
         "subreddit": name,
         "sampled": len(rows),
+        "posts_per_day": posts_per_day,
         "removal_rate": removal_rate,
         "safety": safety,
         "median_score": median_score,
