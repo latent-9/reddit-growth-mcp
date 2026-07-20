@@ -23,6 +23,7 @@ from src.analysis.acceptance import analyze_acceptance as _analyze_acceptance
 from src.analysis.compare import compare_subreddits as _compare_subreddits
 from src.analysis.draft import evaluate_draft as _evaluate_draft
 from src.analysis.patterns import analyze_post_patterns as _analyze_post_patterns
+from src.analysis.plan import build_growth_plan as _build_growth_plan
 from src.analysis.traffic import (
     estimate_activity_archive,
     estimate_subreddit_traffic,
@@ -177,6 +178,23 @@ def compare_subreddits(
     ctx: Context = None,
 ) -> Dict[str, Any]:
     return _compare_subreddits(subreddits, window, sample, rank_by, ctx)
+
+
+@mcp.tool(
+    description=(
+        "Build a growth plan from candidate subreddits: pick the safest strong one, "
+        "list cross-post targets, and return its viral recipe and best posting times. "
+        "No credentials needed."
+    ),
+    annotations={"readOnlyHint": True},
+)
+def growth_plan(
+    subreddits: Annotated[List[str], "Candidate subreddits to plan across"],
+    window: Annotated[str, "Archive lookback, e.g. 30d/60d"] = "30d",
+    time_filter: Annotated[str, "Pattern window for the recipe: week|month|year"] = "month",
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    return _build_growth_plan(subreddits, reddit, window, time_filter=time_filter, ctx=ctx)
 
 
 # ── Raw data access tools ─────────────────────────────────────────────────
