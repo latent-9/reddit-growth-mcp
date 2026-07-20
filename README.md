@@ -8,6 +8,21 @@ It runs as an MCP server (for use inside Claude, Cursor, and other MCP clients)
 and as a standalone command-line tool. Most analysis works without any Reddit
 API credentials, because it reads from a public historical archive.
 
+## Quick start
+
+Requirements: Python 3.11+ and [uv](https://docs.astral.sh/uv/). No Reddit
+account or API keys are needed to get started.
+
+```bash
+uv sync                                                    # install dependencies
+uv run python -m src.cli plan singularity LocalLLaMA mcp   # your first growth plan
+```
+
+That prints where to post, what to post, and when — using only the public
+archive. Every command has the form `uv run python -m src.cli <command> [options]`
+(shown throughout as `reddit-growth <command>`, which is the installed alias).
+Add `-h` to any command for help, e.g. `uv run python -m src.cli plan -h`.
+
 ## What it answers
 
 - Which subreddits fit my topic, and how much reach do they have?
@@ -60,13 +75,17 @@ https://www.reddit.com/prefs/apps, then:
 cp .env.sample .env
 # REDDIT_CLIENT_ID=...
 # REDDIT_CLIENT_SECRET=...
-# REDDIT_USER_AGENT=RedditAnalyzer/0.1 by u/your_username
+# REDDIT_USER_AGENT=reddit-growth-mcp/0.1 by u/your_username
 ```
 
 Without credentials, the pattern, acceptance, comparison, and draft tools still
 work via the archive.
 
 ## Command-line usage
+
+Every command runs credential-free from the archive. The commands are:
+`traffic`, `insight`, `patterns`, `acceptance`, `compare`, `plan`, `report`,
+`draft`, and `fit` (run `-h` on any of them for options).
 
 ```bash
 uv run python -m src.cli traffic LocalLLaMA
