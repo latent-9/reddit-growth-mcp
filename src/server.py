@@ -159,9 +159,10 @@ def compare_subreddits(
     subreddits: Annotated[List[str], "Subreddit names to compare"],
     window: Annotated[str, "Archive lookback, e.g. 30d/60d/90d"] = "60d",
     sample: Annotated[int, "Posts to sample per subreddit"] = 200,
+    rank_by: Annotated[str, "viral (upside) | opportunity (typical reach)"] = "viral",
     ctx: Context = None,
 ) -> Dict[str, Any]:
-    return _compare_subreddits(subreddits, window, sample, ctx)
+    return _compare_subreddits(subreddits, window, sample, rank_by, ctx)
 
 
 # ── Raw data access tools ─────────────────────────────────────────────────

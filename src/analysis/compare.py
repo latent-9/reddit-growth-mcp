@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Union
 
-from .helpers import clean_subreddit_name, features_from_arctic, safe_mean
+from .helpers import clean_subreddit_name, features_from_arctic, safe_mean, percentile
 from . import arctic
 
 
@@ -34,6 +34,10 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     median_comments = live_comments[len(live_comments) // 2] if live_comments else 0
     # Opportunity: reach of a typical surviving post, discounted by removal risk.
     opportunity = round(median_score * (1 - removal_rate), 1)
+    # Viral potential: the upside (90th-percentile reach) a strong post can hit
+    # here, discounted by removal risk. This is what matters for going viral.
+    ceiling = percentile(sorted(live_scores), 90) if live_scores else 0
+    viral_potential = round(ceiling * (1 - removal_rate), 1)
 
     media = {}
     for r in live:
@@ -46,6 +50,8 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
         "removal_rate": removal_rate,
         "median_score": median_score,
         "median_comments": median_comments,
+        "viral_ceiling": ceiling,
+        "viral_potential": viral_potential,
         "avg_score": safe_mean(live_scores),
         "best_media": top_media,
         "opportunity_score": opportunity,
@@ -58,24 +64,34 @@ def compare_subreddits(
     subreddits: Union[str, List[str]],
     window: str = "60d",
     sample: int = 200,
+    rank_by: str = "viral",
     ctx: Any = None,
 ) -> Dict[str, Any]:
-    """Profile and rank subreddits by posting opportunity (no creds needed)."""
+    """Profile and rank subreddits (no creds needed).
+
+    rank_by: 'viral' ranks by viral potential (upside of a strong post);
+    'opportunity' ranks by the reach of a typical post.
+    """
     if isinstance(subreddits, str):
         subreddits = [subreddits]
     names = [clean_subreddit_name(s) for s in subreddits if s and s.strip()]
     if not names:
         return {"error": "Provide at least one subreddit name"}
 
+    sort_key = "viral_potential" if rank_by == "viral" else "opportunity_score"
     profiles = [_profile_subreddit(n, window, sample) for n in names]
     ranked = [p for p in profiles if "error" not in p]
-    ranked.sort(key=lambda p: p["opportunity_score"], reverse=True)
+    ranked.sort(key=lambda p: p[sort_key], reverse=True)
     failed = [p for p in profiles if "error" in p]
 
+    criteria = ("viral potential = 90th-percentile reach × (1 − removal rate)"
+                if rank_by == "viral"
+                else "opportunity = median reach × (1 − removal rate)")
     return {
         "ranked": ranked,
         "failed": failed,
+        "ranked_by": rank_by,
         "best_pick": ranked[0]["subreddit"] if ranked else None,
-        "criteria": "opportunity = median surviving-post score × (1 − mod removal rate)",
+        "criteria": criteria,
         "disclaimer": "Creds-free estimate from the Arctic archive; a sample, not a census.",
     }

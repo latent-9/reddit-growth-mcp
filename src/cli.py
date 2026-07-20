@@ -150,13 +150,12 @@ def _print_acceptance(d: dict) -> None:
 def _print_compare(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
-    _hr("SUBREDDIT COMPARISON  (higher opportunity = better)")
-    print(f"{'subreddit':20} {'opp':>7} {'upvotes':>8} {'comments':>9} {'removal':>8} {'best media':>12}  conf")
+    _hr(f"SUBREDDIT COMPARISON  (ranked by {d.get('ranked_by', 'viral')})")
+    print(f"{'subreddit':20} {'viral':>7} {'ceiling':>8} {'typical':>8} {'comments':>9} {'removal':>8}  conf")
     for p in d["ranked"]:
         conf = "low*" if p.get("low_confidence") else "ok"
-        print(f"  r/{p['subreddit']:17} {p['opportunity_score']:>7} {p['median_score']:>8} "
-              f"{p.get('median_comments', 0):>9} {p['removal_rate']:>7.0%} "
-              f"{str(p['best_media']):>12}  {conf}")
+        print(f"  r/{p['subreddit']:17} {p.get('viral_potential', 0):>7} {p.get('viral_ceiling', 0):>8} "
+              f"{p['median_score']:>8} {p.get('median_comments', 0):>9} {p['removal_rate']:>7.0%}  {conf}")
     if any(p.get("low_confidence") for p in d["ranked"]):
         print("  * low = many AutoMod-filtered posts; add creds for accuracy")
     for f in d.get("failed", []):
@@ -221,10 +220,12 @@ def main(argv=None) -> int:
     sa.add_argument("subreddit")
     sa.add_argument("--sample", type=int, default=200)
 
-    sc = sub.add_parser("compare", help="Rank subreddits by posting opportunity")
+    sc = sub.add_parser("compare", help="Rank subreddits by viral potential or opportunity")
     sc.add_argument("subreddits", nargs="+")
     sc.add_argument("--window", default="60d")
     sc.add_argument("--sample", type=int, default=200)
+    sc.add_argument("--rank-by", dest="rank_by", default="viral",
+                    choices=["viral", "opportunity"])
 
     sr = sub.add_parser("report", help="Full report: acceptance + patterns for a subreddit")
     sr.add_argument("subreddit")
@@ -250,7 +251,7 @@ def main(argv=None) -> int:
         result = analyze_acceptance(args.subreddit, reddit, args.sample)
         printer = _print_acceptance
     elif args.cmd == "compare":
-        result = compare_subreddits(args.subreddits, args.window, args.sample)
+        result = compare_subreddits(args.subreddits, args.window, args.sample, args.rank_by)
         printer = _print_compare
     elif args.cmd == "draft":
         result = evaluate_draft(args.subreddit, args.title, reddit, args.body, args.post_type, args.flair)
