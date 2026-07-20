@@ -26,6 +26,16 @@ from typing import Any, Dict, List, Optional
 ARCTIC_BASE = "https://arctic-shift.photon-reddit.com"
 _UA = "reddit-analyzer/0.1 (archive diff)"
 
+# Per-process response cache. Compare/patterns/draft often hit the same
+# subreddit windows; caching avoids redundant calls and rate-limit hits.
+_CACHE: Dict[str, Dict[str, Any]] = {}
+_CACHE_ENABLED = True
+
+
+def clear_cache() -> None:
+    """Drop all cached Arctic responses (useful for tests or long sessions)."""
+    _CACHE.clear()
+
 
 class ArcticUnavailable(Exception):
     """Raised when the Arctic Shift service can't be reached or errored."""
@@ -35,13 +45,18 @@ def _get(path: str, params: Dict[str, Any], timeout: int = 20,
          retries: int = 2, backoff: float = 1.5) -> Dict[str, Any]:
     query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
     url = f"{ARCTIC_BASE}{path}?{query}"
+    if _CACHE_ENABLED and url in _CACHE:
+        return _CACHE[url]
     req = urllib.request.Request(url, headers={"User-Agent": _UA})
 
     last_err = None
     for attempt in range(retries + 1):
         try:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
-                return json.load(resp)
+                data = json.load(resp)
+            if _CACHE_ENABLED:
+                _CACHE[url] = data
+            return data
         except urllib.error.HTTPError as e:
             # Arctic returns 422/429 with {"error": "Timeout. Maybe slow down"}
             # when rate-limited — those are worth retrying with backoff.
