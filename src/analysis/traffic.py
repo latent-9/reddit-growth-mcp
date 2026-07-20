@@ -14,7 +14,64 @@ from typing import Any, Dict, List, Optional, Union
 import praw
 from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
 
-from .helpers import clean_subreddit_name, safe_mean
+from .helpers import clean_subreddit_name, safe_mean, features_from_arctic
+from . import arctic
+
+
+def _velocity_tier(posts_per_day: float) -> str:
+    if posts_per_day >= 200:
+        return "very_high"
+    if posts_per_day >= 50:
+        return "high"
+    if posts_per_day >= 10:
+        return "medium"
+    if posts_per_day >= 1:
+        return "low"
+    return "minimal"
+
+
+def estimate_activity_archive(
+    subreddit_name: str,
+    window: str = "30d",
+    sample: int = 200,
+    ctx: Any = None,
+) -> Dict[str, Any]:
+    """Estimate a subreddit's activity from the Arctic archive — no creds needed.
+
+    Reddit hides subscriber/visitor counts from the public API, and Arctic has no
+    subscriber data, so we report posting/comment velocity as the traffic proxy.
+    """
+    name = clean_subreddit_name(subreddit_name)
+    try:
+        posts = arctic.fetch_many_posts(name, after=window, before="2d", target=sample)
+    except arctic.ArcticUnavailable as e:
+        return {"error": f"Archive unavailable: {e}", "subreddit": name}
+    if not posts:
+        return {"error": "No archived posts found", "subreddit": name}
+
+    times = sorted(p.get("created_utc", 0) or 0 for p in posts)
+    span_days = (times[-1] - times[0]) / 86400.0 if len(times) >= 2 else 0.0
+    posts_per_day = round(len(posts) / span_days, 1) if span_days > 0 else 0.0
+
+    rows = [features_from_arctic(p) for p in posts]
+    live = [r for r in rows if r["removal_status"] == "live"]
+    comments = sorted(r["num_comments"] for r in live) or [0]
+    scores = sorted(r["score"] for r in live) or [0]
+
+    return {
+        "subreddit": name,
+        "source": "archive",
+        "signals": {
+            "posts_per_day_est": posts_per_day,
+            "median_comments_per_post": comments[len(comments) // 2],
+            "median_score": scores[len(scores) // 2],
+            "sample": len(posts),
+            "span_days": round(span_days, 1),
+        },
+        "activity_tier": _velocity_tier(posts_per_day),
+        "disclaimer": ("Velocity-based estimate from public archive data. Reddit "
+                       "does not expose subscriber or visitor counts publicly."),
+    }
 
 
 def _activity_tier(estimated_daily_visitors: float) -> str:

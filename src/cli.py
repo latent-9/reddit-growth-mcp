@@ -23,6 +23,7 @@ from src.analysis.patterns import analyze_post_patterns
 from src.analysis.acceptance import analyze_acceptance
 from src.analysis.compare import compare_subreddits
 from src.analysis.draft import evaluate_draft
+from src.analysis.traffic import estimate_activity_archive
 
 load_dotenv()
 
@@ -281,6 +282,10 @@ def main(argv=None) -> int:
     sa.add_argument("subreddit")
     sa.add_argument("--sample", type=int, default=200)
 
+    st_ = sub.add_parser("traffic", help="Estimate a subreddit's activity (posts/day)")
+    st_.add_argument("subreddit")
+    st_.add_argument("--window", default="30d")
+
     sc = sub.add_parser("compare", help="Rank subreddits by viral potential or opportunity")
     sc.add_argument("subreddits", nargs="+")
     sc.add_argument("--window", default="60d")
@@ -322,6 +327,14 @@ def main(argv=None) -> int:
     elif args.cmd == "draft":
         result = evaluate_draft(args.subreddit, args.title, reddit, args.body, args.post_type, args.flair)
         printer = _print_draft
+    elif args.cmd == "traffic":
+        result = estimate_activity_archive(args.subreddit, args.window)
+        printer = lambda d: (print("Error:", d["error"]) if "error" in d else
+                             print(f"\nr/{d['subreddit']} — activity: {d['activity_tier']}\n"
+                                   f"  {d['signals']['posts_per_day_est']} posts/day · "
+                                   f"median {d['signals']['median_score']} upvotes · "
+                                   f"{d['signals']['median_comments_per_post']} comments "
+                                   f"(sample {d['signals']['sample']} over {d['signals']['span_days']}d)"))
     elif args.cmd == "plan":
         _run_plan(args, reddit)
         return 0

@@ -24,7 +24,9 @@ from src.resources import register_resources
 from src.tools.search import search_in_subreddit
 from src.tools.posts import fetch_subreddit_posts, fetch_multiple_subreddits
 from src.tools.comments import fetch_submission_with_comments
-from src.analysis.traffic import estimate_subreddit_traffic, find_target_subreddits
+from src.analysis.traffic import (
+    estimate_subreddit_traffic, find_target_subreddits, estimate_activity_archive,
+)
 from src.analysis.acceptance import analyze_acceptance as _analyze_acceptance
 from src.analysis.patterns import analyze_post_patterns as _analyze_post_patterns
 from src.analysis.draft import evaluate_draft as _evaluate_draft
@@ -96,8 +98,9 @@ def analyze_subreddit(
     sample_size: Annotated[int, "Recent posts to sample for velocity"] = 50,
     ctx: Context = None,
 ) -> Dict[str, Any]:
+    # Falls back to a credential-free velocity estimate from the archive.
     if reddit is None:
-        return _NO_CREDS
+        return estimate_activity_archive(subreddit_name, ctx=ctx)
     return estimate_subreddit_traffic(subreddit_name, reddit, sample_size, ctx)
 
 
