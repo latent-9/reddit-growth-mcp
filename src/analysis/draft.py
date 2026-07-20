@@ -12,7 +12,7 @@ import praw
 
 from .acceptance import analyze_acceptance
 from .patterns import analyze_post_patterns
-from .helpers import extract_title_features
+from .helpers import extract_title_features, clickbait_score
 
 
 def _clamp(x: float, lo: float, hi: float) -> float:
@@ -133,6 +133,20 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
         r = _clamp(1 + 0.1 * len(matched), 1.0, 1.4); mult *= r
         drivers.append({"factor": f"keywords={matched}", "impact": f"×{round(r,2)}"})
 
+    # Clickbait check: penalize only if this sub actually dislikes clickbait.
+    cb = clickbait_score(title)
+    effect = patterns.get("clickbait_effect", {})
+    if cb >= 0.4:
+        if effect.get("verdict") == "clickbait_penalized":
+            mult *= 0.85
+            drivers.append({"factor": "clickbait_title", "impact": "×0.85 (this sub penalizes it)"})
+            suggestions.append(f"Your title reads clickbaity (score {cb}); r/{patterns.get('subreddit','this sub')} "
+                               f"rewards genuine framing ({effect.get('lift_pct')}% for clickbait). Tone it down.")
+        elif effect.get("verdict") == "clickbait_rewarded":
+            drivers.append({"factor": "clickbait_title", "impact": "neutral (sub tolerates it)"})
+        else:
+            suggestions.append(f"Title is a bit clickbaity (score {cb}); prefer a clear, honest framing.")
+
     projected = round(overall * mult, 1)
 
     # Map projected score onto the sample distribution → 0-100.
@@ -157,6 +171,8 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
         "projected_score": projected,
         "performance_band": band,
         "baseline_avg_score": overall,
+        "clickbait_risk": cb,
+        "sub_clickbait_verdict": effect.get("verdict"),
         "drivers": drivers,
         "suggestions": suggestions,
     }
@@ -203,6 +219,8 @@ def evaluate_draft(
         "performance_band": prediction["performance_band"],
         "projected_score": prediction["projected_score"],
         "baseline_avg_score": prediction["baseline_avg_score"],
+        "clickbait_risk": prediction["clickbait_risk"],
+        "sub_clickbait_verdict": prediction["sub_clickbait_verdict"],
         "score_drivers": prediction["drivers"],
         "suggestions": prediction["suggestions"],
         "best_posting_hours_utc": patterns.get("best_posting_hours_utc", [])[:3],

@@ -11,7 +11,7 @@ right high-traffic communities and post content that fits.
 | `find_target_subreddits_tool` | Which subreddits fit my topics, ranked by estimated traffic? |
 | `analyze_subreddit` | How big/active is this community? |
 | `analyze_acceptance` | Will my post survive here? (real removal rate + what gets nuked; rules/gates when creds present) |
-| `analyze_post_patterns` | What makes posts perform? (timing, title style, media, flair, winning keywords) |
+| `analyze_post_patterns` | What makes posts perform? (timing, title, media, flair, keywords) — pick a metric: upvotes / comments / discussion (anti-clickbait) / quality |
 | `compare_subreddits` | Which of these subs gives the best shot? (reach vs removal risk) |
 | `evaluate_draft` | Predict a draft's performance (0–100) + acceptance risk, with drivers & fixes |
 | `fetch_posts` · `fetch_multiple` · `search_subreddit` · `fetch_comments` | Raw data access |
@@ -76,7 +76,11 @@ uv run python -m src.cli compare Fedora gnome linux        # rank subs by opport
 uv run python -m src.cli draft ClaudeAI --title "I built an ASCII art tool"
 ```
 
-Add `--json` to any command for raw output (piping, scripts).
+Add `--json` to any command for raw output. `patterns` takes `--metric`:
+`score` (upvotes), `comments`, `discussion` (comments/upvote — anti-clickbait),
+or `quality` (upvotes damped by a clickbait penalty). Every report also states
+whether the sub actually *rewards* clickbait, so the guidance never pushes you
+toward it.
 
 ## Notes & limits
 

@@ -127,9 +127,10 @@ def analyze_post_patterns(
     time_filter: Annotated[str, "all|year|month|week|day (for 'top')"] = "month",
     limit: Annotated[int, "Posts to sample"] = 100,
     source: Annotated[str, "auto | reddit | archive (archive needs no Reddit creds)"] = "auto",
+    metric: Annotated[str, "score | comments | discussion (anti-clickbait) | quality"] = "score",
     ctx: Context = None,
 ) -> Dict[str, Any]:
-    return _analyze_post_patterns(subreddit_name, reddit, listing_type, time_filter, limit, source, ctx)
+    return _analyze_post_patterns(subreddit_name, reddit, listing_type, time_filter, limit, source, metric, ctx)
 
 
 @mcp.tool(

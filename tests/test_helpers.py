@@ -13,6 +13,9 @@ from src.analysis.helpers import (
     winning_keywords,
     percentile,
     rank_percentile,
+    clickbait_score,
+    engagement_ratio,
+    metric_value,
 )
 
 
@@ -126,3 +129,24 @@ def test_rank_percentile():
     assert rank_percentile(vals, 1) == 0      # nothing below the minimum
     assert rank_percentile(vals, 6) == 50     # half below
     assert rank_percentile(vals, 100) == 100  # everything below
+
+
+def test_clickbait_score():
+    assert clickbait_score("A calm honest title about Fedora") == 0.0
+    assert clickbait_score("You won't BELIEVE this INSANE trick!!!") >= 0.5
+    assert clickbait_score("My new ASCII tool 🔥🔥🔥") > 0
+    # Clean dev title stays low.
+    assert clickbait_score("Open-source MCP server for ASCII art") < 0.3
+
+
+def test_engagement_ratio():
+    assert engagement_ratio(100, 50) == 0.5
+    assert engagement_ratio(0, 5) == 5.0   # guards divide-by-zero
+
+
+def test_metric_value():
+    row = {"score": 100, "num_comments": 20, "clickbait": 0.6}
+    assert metric_value(row, "score") == 100
+    assert metric_value(row, "comments") == 20
+    assert metric_value(row, "discussion") == 0.2
+    assert metric_value(row, "quality") == 70.0   # 100 * (1 - 0.5*0.6)

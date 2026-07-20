@@ -138,6 +138,7 @@ def submission_to_features(submission: Any) -> Dict[str, Any]:
         "permalink": f"https://reddit.com{getattr(submission, 'permalink', '')}",
         "created_utc": created,
     }
+    features["clickbait"] = clickbait_score(title)
     features.update(extract_title_features(title))
     if created:
         features.update(extract_time_features(created))
@@ -181,6 +182,64 @@ def safe_mean(values: List[float]) -> float:
     return round(sum(values) / len(values), 2) if values else 0.0
 
 
+# --- Clickbait detection -------------------------------------------------
+_CLICKBAIT_PHRASES = re.compile(
+    r"\b(you won'?t believe|will blow your mind|shocking|insane|jaw[- ]dropping|"
+    r"this one (trick|weird)|nobody (talks about|tells you)|mind[- ]?blown|"
+    r"gone wrong|must[- ]see|game[- ]changer|the truth about|what happens next|"
+    r"i can'?t believe|blew my mind|life[- ]changing|never seen before)\b",
+    re.I,
+)
+_HYPE_WORDS = re.compile(r"\b(amazing|incredible|unbelievable|epic|ultimate|"
+                         r"revolutionary|insane|crazy|perfect|best ever|100%)\b", re.I)
+_EMOJI = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF]")
+
+
+def clickbait_score(title: str) -> float:
+    """Heuristic 0..1 clickbait score for a title (higher = more clickbaity)."""
+    t = title or ""
+    if not t.strip():
+        return 0.0
+    points = 0.0
+    if _CLICKBAIT_PHRASES.search(t):
+        points += 0.5
+    points += 0.15 * len(_HYPE_WORDS.findall(t))
+    # Shouted words (>=6 chars) — long enough to exclude dev acronyms like
+    # MCP/ASCII/API/JSON while still catching BELIEVE/INSANE/SHOCKING.
+    caps = sum(1 for w in t.split() if len(w) >= 6 and w.isupper())
+    points += 0.15 * caps
+    # Excess punctuation and emoji.
+    points += 0.15 * len(re.findall(r"[!?]{2,}", t))
+    points += 0.10 * len(_EMOJI.findall(t))
+    if t.count("!") >= 3:
+        points += 0.2
+    return round(min(points, 1.0), 2)
+
+
+def engagement_ratio(score: int, num_comments: int) -> float:
+    """Comments per upvote — a proxy for genuine discussion vs drive-by upvotes."""
+    return round(num_comments / max(score, 1), 3)
+
+
+def metric_value(row: Dict[str, Any], metric: str = "score") -> float:
+    """Pluggable performance metric for a post feature row.
+
+    - 'score'      : raw upvotes (reach)
+    - 'comments'   : comment count (discussion volume)
+    - 'discussion' : comments per upvote (engagement quality, anti-clickbait)
+    - 'quality'    : score damped by a clickbait penalty (rewards genuine reach)
+    """
+    score = row.get("score", 0) or 0
+    comments = row.get("num_comments", 0) or 0
+    if metric == "comments":
+        return comments
+    if metric == "discussion":
+        return engagement_ratio(score, comments)
+    if metric == "quality":
+        return round(score * (1 - 0.5 * row.get("clickbait", 0.0)), 1)
+    return score
+
+
 def percentile(sorted_values: List[float], q: float) -> float:
     """Linear-interpolated percentile (q in 0..100) of a pre-sorted list."""
     if not sorted_values:
@@ -218,16 +277,17 @@ def winning_keywords(
     top_frac: float = 0.25,
     min_count: int = 3,
     n: int = 12,
+    score_key: str = "score",
 ) -> List[Dict[str, Any]]:
-    """Words over-represented in high-scoring titles vs the rest.
+    """Words over-represented in high-performing titles vs the rest.
 
-    Splits `rows` (each with 'title' and 'score') into a top slice and the
+    Splits `rows` (each with 'title' and `score_key`) into a top slice and the
     remainder, then ranks words by how much more often they appear up top.
     Uses additive smoothing so rare words don't produce infinite lift.
     """
     if len(rows) < 8:
         return []
-    ranked = sorted(rows, key=lambda r: r["score"], reverse=True)
+    ranked = sorted(rows, key=lambda r: r.get(score_key, 0), reverse=True)
     k = max(1, int(len(ranked) * top_frac))
     top, rest = ranked[:k], ranked[k:]
 

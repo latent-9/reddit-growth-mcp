@@ -44,9 +44,14 @@ def _hr(title: str) -> None:
 def _print_patterns(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
-    _hr(f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, n={d['sampled']})")
+    _hr(f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, n={d['sampled']})")
     st = d["score_stats"]
-    print(f"Score: avg {st['avg']} · median {st['median']} · max {st['max']}")
+    print(f"{d.get('metric','score')}: avg {st['avg']} · median {st['median']} · max {st['max']}")
+    cb = d.get("clickbait_effect", {})
+    if cb:
+        print(f"Clickbait here: {cb.get('verdict')} "
+              f"(baity avg {cb.get('clickbait_avg')} vs clean {cb.get('clean_avg')}, "
+              f"{cb.get('lift_pct')}%)")
 
     _hr("Best media types (avg score)")
     for m in d["score_by_media_type"]:
@@ -77,7 +82,8 @@ def _print_patterns(d: dict) -> None:
 
     _hr("Top examples")
     for ex in d["top_examples"][:5]:
-        print(f"  ↑{ex['score']:<6} [{ex['media_type']}] {ex['title'][:70]}")
+        cbf = " ⚠cb" if ex.get("clickbait", 0) >= 0.4 else ""
+        print(f"  ↑{ex['score']:<6} 💬{ex.get('num_comments', 0):<5}{cbf} [{ex['media_type']}] {ex['title'][:60]}")
 
 
 def _print_acceptance(d: dict) -> None:
@@ -131,6 +137,8 @@ def _print_draft(d: dict) -> None:
           f"removal {d.get('removal_rate_estimate', 0):.0%})")
     print(f"Performance: {d['performance_score']}/100 [{d['performance_band']}]  ·  "
           f"projected score ~{d['projected_score']} (sub avg {d['baseline_avg_score']})")
+    if d.get("clickbait_risk", 0) >= 0.4:
+        print(f"Clickbait risk: {d['clickbait_risk']} (sub verdict: {d.get('sub_clickbait_verdict')})")
     if d.get("blocking_issues"):
         _hr("Blocking issues (likely removal)")
         for i in d["blocking_issues"]:
@@ -158,6 +166,9 @@ def main(argv=None) -> int:
     sp.add_argument("subreddit")
     sp.add_argument("--time", default="month", choices=["day", "week", "month", "year", "all"])
     sp.add_argument("--limit", type=int, default=200)
+    sp.add_argument("--metric", default="score",
+                    choices=["score", "comments", "discussion", "quality"],
+                    help="score=upvotes, discussion=comments/upvote (anti-clickbait), quality=clickbait-damped")
 
     sa = sub.add_parser("acceptance", help="Removal rate + what gets nuked")
     sa.add_argument("subreddit")
@@ -181,7 +192,7 @@ def main(argv=None) -> int:
         print("(no Reddit credentials — using archive mode)", file=sys.stderr)
 
     if args.cmd == "patterns":
-        result = analyze_post_patterns(args.subreddit, reddit, "top", args.time, args.limit, "auto")
+        result = analyze_post_patterns(args.subreddit, reddit, "top", args.time, args.limit, "auto", args.metric)
         printer = _print_patterns
     elif args.cmd == "acceptance":
         result = analyze_acceptance(args.subreddit, reddit, args.sample)
