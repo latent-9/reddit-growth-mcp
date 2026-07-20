@@ -72,17 +72,17 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
     for m in d["score_by_media_type"]:
         print(f"  {str(m['value']):16} med {m['median']:>7} / mean {m['mean']:>7}   ({m['count']} posts)")
 
-    _hr("Best time blocks (UTC)")
+    _hr("Best time blocks (by hit-rate = share of strong posts)")
     for b in d.get("best_time_blocks", []):
-        print(f"  {b['block']:12} med {b['median']:>7} / mean {b['mean']:>7}   ({b['posts']} posts)")
+        print(f"  {b['block']:12} hit {b.get('hit_rate', 0):>5.0%}   mean {b['mean']:>7}   ({b['posts']} posts)")
 
-    _hr("Best posting hours (>=3 posts)")
+    _hr("Best posting hours (>=3 posts, by hit-rate)")
     for h in d["best_posting_hours_utc"][:5]:
-        print(f"  {_fmt_hour(h['hour_utc'], tz):<28} med {h['median']:>6} / mean {h['mean']:>6}   ({h['posts']} posts)")
+        print(f"  {_fmt_hour(h['hour_utc'], tz):<28} hit {h.get('hit_rate', 0):>5.0%}   mean {h['mean']:>6}   ({h['posts']} posts)")
 
-    _hr("Best days")
+    _hr("Best days (by hit-rate)")
     for x in d["best_posting_days"][:3]:
-        print(f"  {x['day']:10} med {x['median']} / mean {x['mean']}   ({x['posts']} posts)")
+        print(f"  {x['day']:10} hit {x.get('hit_rate', 0):>5.0%}   mean {x['mean']}   ({x['posts']} posts)")
 
     _hr("Top flairs (median / mean)")
     for f in d["score_by_flair"][:6]:

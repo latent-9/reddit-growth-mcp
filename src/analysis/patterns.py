@@ -57,16 +57,24 @@ def _median(vals: List[float]) -> float:
 
 
 def _group_stats(rows: List[Dict[str, Any]], key: str, perf: str,
-                 min_n: int = 3) -> List[Dict[str, Any]]:
+                 min_n: int = 3, threshold: float = None) -> List[Dict[str, Any]]:
     """Group by a categorical feature; rank by median (outlier-robust), mean as
     tiebreak. Only buckets with >= min_n samples are eligible, so a single lucky
-    post can't crown a category. Each row carries its sample count.
+    post can't crown a category. When `threshold` is given, each bucket also
+    reports its hit_rate: the share of posts at or above that threshold — a
+    robust "how often does a strong post land here" signal.
     """
     buckets: Dict[Any, List[float]] = defaultdict(list)
     for r in rows:
         buckets[r.get(key)].append(r[perf])
-    out = [{"value": k, "median": _median(v), "mean": safe_mean(v), "count": len(v)}
-           for k, v in buckets.items() if len(v) >= min_n]
+    out = []
+    for k, v in buckets.items():
+        if len(v) < min_n:
+            continue
+        entry = {"value": k, "median": _median(v), "mean": safe_mean(v), "count": len(v)}
+        if threshold is not None:
+            entry["hit_rate"] = round(sum(1 for x in v if x >= threshold) / len(v), 2)
+        out.append(entry)
     out.sort(key=lambda d: (d["median"], d["mean"]), reverse=True)
     return out
 
@@ -181,13 +189,21 @@ def analyze_post_patterns(
     if confidence == "high" and span_days and span_days < 3:
         confidence = "medium"  # lots of posts but only a sliver of time
 
-    # Hours need a looser min (naturally sparse); blocks/days/categories tighter.
-    best_hours = [{"hour_utc": b["value"], "median": b["median"], "mean": b["mean"],
-                   "posts": b["count"]} for b in _group_stats(rows, "hour_utc", perf, min_n=3)][:5]
-    time_blocks = [{"block": b["value"], "median": b["median"], "mean": b["mean"],
-                    "posts": b["count"]} for b in _group_stats(rows, "time_block", perf, min_n=5)]
-    best_days = [{"day": b["value"], "median": b["median"], "mean": b["mean"],
-                  "posts": b["count"]} for b in _group_stats(rows, "weekday_name", perf, min_n=3)]
+    # "Strong post" threshold = 75th percentile of the metric. Timing buckets
+    # rank by hit_rate (share of strong posts), which is robust to outliers.
+    strong = percentile(sorted(vals), 75)
+
+    def _by_hit(rows_, key, min_n):
+        stats = _group_stats(rows_, key, perf, min_n=min_n, threshold=strong)
+        stats.sort(key=lambda d: (d.get("hit_rate", 0), d["median"]), reverse=True)
+        return stats
+
+    best_hours = [{"hour_utc": b["value"], "hit_rate": b.get("hit_rate"), "median": b["median"],
+                   "mean": b["mean"], "posts": b["count"]} for b in _by_hit(rows, "hour_utc", 3)][:5]
+    time_blocks = [{"block": b["value"], "hit_rate": b.get("hit_rate"), "median": b["median"],
+                    "mean": b["mean"], "posts": b["count"]} for b in _by_hit(rows, "time_block", 5)]
+    best_days = [{"day": b["value"], "hit_rate": b.get("hit_rate"), "median": b["median"],
+                  "mean": b["mean"], "posts": b["count"]} for b in _by_hit(rows, "weekday_name", 3)]
 
     disc_ratios = [engagement_ratio(r["score"], r["num_comments"]) for r in rows]
 
