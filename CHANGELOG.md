@@ -55,6 +55,17 @@ semantic versioning.
 - Removal detection treats AutoMod-filtered posts as uncertain, and flags
   low-confidence samples; an accurate live diff runs when credentials exist.
 
+### Fixed
+- `evaluate_draft` verdict now folds in the sub's base removal rate: a fully
+  compliant draft in a subreddit that removes most of what it gets is flagged
+  `risky` (or `likely_removed` alongside warnings) instead of `likely_accepted`.
+- `evaluate_draft` title-signal drivers and suggestions are gated on the
+  existing reliability flag, so a lone lucky post can no longer produce an
+  absurd lift (e.g. +72100%) or a bogus "add this signal" suggestion.
+- CLI `report` (and the pattern/acceptance printers) render section-level
+  failures — a strict sub with nothing to sample, or a rate-limited archive —
+  as a clear note explaining the cause, instead of a raw `Error:` line.
+
 ### Changed
 - Response caching, retry/backoff, and local-timezone posting-time display.
 

@@ -245,7 +245,9 @@ The tool is built to avoid the common failure modes of naive Reddit analytics.
   median, with the mean shown for reference, so a single viral post cannot crown
   a category.
 - Minimum-sample gating. A category or time bucket must contain enough posts to
-  be reported as "best". Small buckets are not treated as reliable signals.
+  be reported as "best". Small buckets are not treated as reliable signals, and
+  draft scoring ignores title signals whose with/without groups are too small,
+  so a single lucky post cannot swing a projection or seed a bogus suggestion.
 - Confidence labelling. Each pattern report states a confidence level based on
   its sample size, and each acceptance report states a reliability level.
 - Settled scores. Archived scores stabilise after roughly 36 hours, so analysis
@@ -254,6 +256,9 @@ The tool is built to avoid the common failure modes of naive Reddit analytics.
   treated as uncertain, not confirmed removals, because they are frequently
   approved later. On AutoMod-heavy subreddits this is flagged, and an accurate
   live check requires credentials.
+- Removal-aware verdicts. A draft's acceptance verdict folds in the sub's base
+  removal rate, so a compliant post in a subreddit that removes most of what it
+  gets is flagged risky rather than "likely accepted".
 - Anti-clickbait. Clickbait titles are detected (hype phrases, shouted words,
   emoji and punctuation spam), and each report states whether the community
   actually rewards or penalises clickbait, so guidance never pushes you toward
