@@ -210,6 +210,50 @@ def _print_draft(d: dict) -> None:
             print("  Days: " + ", ".join(x["day"] for x in days[:2]))
 
 
+def _run_plan(args, reddit) -> None:
+    """Growth planner: rank subs, pick the safest strong one, print its recipe."""
+    comp = compare_subreddits(args.subreddits, args.window, 90, "growth")
+    if "error" in comp or not comp.get("ranked"):
+        print("Could not rank subreddits:", comp.get("error", "no data")); return
+
+    # Prefer a safe/moderate, high-confidence sub with real growth potential.
+    eligible = [p for p in comp["ranked"]
+                if p.get("safety") != "strict" and not p.get("low_confidence")]
+    pick = (eligible or comp["ranked"])[0]
+    name = pick["subreddit"]
+
+    _hr("GROWTH PLAN")
+    print(f"Target: r/{name}")
+    print(f"  growth {pick.get('growth_score')} · viral {pick.get('viral_potential')} · "
+          f"{pick.get('posts_per_day')} posts/day · {pick.get('median_comments')} comments · "
+          f"{pick['removal_rate']:.0%} removed ({pick.get('safety')})")
+    skipped = [p["subreddit"] for p in comp["ranked"]
+               if p.get("safety") == "strict" or p.get("low_confidence")]
+    if skipped:
+        print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in skipped)}")
+
+    pat = analyze_post_patterns(name, reddit, "top", "month", 200, "auto")
+    if "error" in pat:
+        print("  (pattern read unavailable right now)"); return
+    vp = pat.get("viral_profile", {})
+    if vp.get("available"):
+        rc = vp["recipe"]
+        _hr("What to post (viral recipe)")
+        print(f"  Format : {rc['media_type']['value']}")
+        if rc["flair"]["value"]:
+            print(f"  Flair  : {rc['flair']['value']}")
+        print(f"  Length : ~{rc['title']['median_char_length']} chars, no clickbait")
+        if rc.get("keywords"):
+            print(f"  Words  : work in {', '.join(rc['keywords'][:5])}")
+    hrs = pat.get("best_posting_hours_utc", [])
+    if hrs:
+        _hr("When to post")
+        print("  " + " / ".join(_fmt_hour(h["hour_utc"], args.tz) for h in hrs[:3]))
+    days = pat.get("best_posting_days", [])
+    if days:
+        print("  Days: " + ", ".join(x["day"] for x in days[:2]))
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="reddit-analyzer", description="Analyze subreddits and post patterns.")
     p.add_argument("--json", action="store_true", help="Emit raw JSON instead of a formatted report")
@@ -241,6 +285,11 @@ def main(argv=None) -> int:
     sr.add_argument("--time", default="month", choices=["day", "week", "month", "year", "all"])
     sr.add_argument("--tz", type=float, default=0.0)
 
+    spl = sub.add_parser("plan", help="Growth plan: pick the best safe sub and its viral recipe")
+    spl.add_argument("subreddits", nargs="+")
+    spl.add_argument("--window", default="30d")
+    spl.add_argument("--tz", type=float, default=0.0)
+
     sd = sub.add_parser("draft", help="Evaluate a post draft")
     sd.add_argument("subreddit")
     sd.add_argument("--title", required=True)
@@ -265,6 +314,9 @@ def main(argv=None) -> int:
     elif args.cmd == "draft":
         result = evaluate_draft(args.subreddit, args.title, reddit, args.body, args.post_type, args.flair)
         printer = _print_draft
+    elif args.cmd == "plan":
+        _run_plan(args, reddit)
+        return 0
     elif args.cmd == "report":
         acc = analyze_acceptance(args.subreddit, reddit)
         pat = analyze_post_patterns(args.subreddit, reddit, "top", args.time, 200, "auto")
