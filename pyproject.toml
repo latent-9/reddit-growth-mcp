@@ -51,7 +51,7 @@ select = ["E", "F", "I"]
 
 [project.scripts]
 reddit-analyzer = "src.server:main"
-reddit-analyzer-cli = "src.cli:main"
+reddit-analyzer-cli = "src.cli:run"
 
 [build-system]
 requires = ["hatchling"]

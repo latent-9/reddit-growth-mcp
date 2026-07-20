@@ -392,74 +392,106 @@ def _run_plan(args, reddit) -> None:
         print("  Days: " + ", ".join(x["day"] for x in plan["best_posting_days"]))
 
 
-def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="reddit-analyzer", description="Analyze subreddits and post patterns.")
-    p.add_argument("--json", action="store_true", help="Emit raw JSON instead of a formatted report")
-    sub = p.add_subparsers(dest="cmd", required=True)
+_EPILOG = """
+examples:
+  reddit-analyzer compare singularity LocalLLaMA mcp      rank subs for growth
+  reddit-analyzer plan singularity LocalLLaMA --tz 7      full growth plan
+  reddit-analyzer patterns Fedora --time month           what performs + viral recipe
+  reddit-analyzer insight mcp                             discussion depth
+  reddit-analyzer traffic LocalLLaMA                      activity (posts/day)
+  reddit-analyzer draft ClaudeAI --title "..." --type image
+  reddit-analyzer fit singularity mcp --title "..." --type video
 
-    sp = sub.add_parser("patterns", help="What makes posts perform in a subreddit")
-    sp.add_argument("subreddit")
-    sp.add_argument("--time", default="month", choices=["day", "week", "month", "year", "all"])
-    sp.add_argument("--limit", type=int, default=200)
+Most commands work WITHOUT Reddit credentials (data from the Arctic archive).
+Add REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env to unlock official rules and
+live checks. All figures are estimates from a sample, not guarantees.
+"""
+
+_TIME_CHOICES = ["day", "week", "month", "year", "all"]
+_SUB_HELP = "Subreddit name, without the r/ prefix"
+_SUBS_HELP = "One or more subreddit names (without r/), space-separated"
+_TZ_HELP = "Local UTC offset in hours to also show posting times (e.g. 7 for WIB)"
+
+
+def main(argv=None) -> int:
+    p = argparse.ArgumentParser(
+        prog="reddit-analyzer",
+        description="Analyze subreddits and post patterns to grow a Reddit account.",
+        epilog=_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    p.add_argument("--json", action="store_true", help="Emit raw JSON instead of a formatted report")
+    sub = p.add_subparsers(dest="cmd", required=True, metavar="command")
+
+    sp = sub.add_parser("patterns", help="What makes posts perform (viral recipe, timing, keywords)")
+    sp.add_argument("subreddit", help=_SUB_HELP)
+    sp.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Time window (default: month)")
+    sp.add_argument("--limit", type=int, default=200, help="Posts to sample (default: 200)")
     sp.add_argument(
         "--metric",
         default="score",
         choices=["score", "comments", "discussion", "quality"],
         help="score=upvotes, discussion=comments/upvote (anti-clickbait), quality=clickbait-damped",
     )
-    sp.add_argument(
-        "--tz", type=float, default=0.0, help="Local UTC offset in hours to also show posting times in (e.g. 7 for WIB)"
-    )
+    sp.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
 
-    sa = sub.add_parser("acceptance", help="Removal rate + what gets nuked")
-    sa.add_argument("subreddit")
-    sa.add_argument("--sample", type=int, default=200)
+    sa = sub.add_parser("acceptance", help="Removal rate and what tends to get removed")
+    sa.add_argument("subreddit", help=_SUB_HELP)
+    sa.add_argument("--sample", type=int, default=200, help="Posts to sample (default: 200)")
 
     st_ = sub.add_parser("traffic", help="Estimate a subreddit's activity (posts/day)")
-    st_.add_argument("subreddit")
-    st_.add_argument("--window", default="30d")
+    st_.add_argument("subreddit", help=_SUB_HELP)
+    st_.add_argument("--window", default="30d", help="Archive lookback, e.g. 7d/30d (default: 30d)")
 
-    si = sub.add_parser("insight", help="Measure a subreddit's discussion depth (comment substance)")
-    si.add_argument("subreddit")
-    si.add_argument("--after", default="3d")
+    si = sub.add_parser("insight", help="Measure discussion depth (how substantive comments are)")
+    si.add_argument("subreddit", help=_SUB_HELP)
+    si.add_argument("--after", default="3d", help="Comment lookback, e.g. 3d/7d (default: 3d)")
 
-    sc = sub.add_parser("compare", help="Rank subreddits by viral potential or opportunity")
-    sc.add_argument("subreddits", nargs="+")
-    sc.add_argument("--window", default="60d")
-    sc.add_argument("--sample", type=int, default=200)
+    sc = sub.add_parser("compare", help="Rank subreddits by growth/viral/insight, with safety")
+    sc.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
+    sc.add_argument("--window", default="60d", help="Archive lookback (default: 60d)")
+    sc.add_argument("--sample", type=int, default=200, help="Posts to sample per sub (default: 200)")
     sc.add_argument(
-        "--rank-by", dest="rank_by", default="growth", choices=["growth", "viral", "opportunity", "insight"]
+        "--rank-by",
+        dest="rank_by",
+        default="growth",
+        choices=["growth", "viral", "opportunity", "insight"],
+        help="Ranking metric (default: growth)",
     )
 
     sr = sub.add_parser("report", help="Full report: acceptance + patterns for a subreddit")
-    sr.add_argument("subreddit")
-    sr.add_argument("--time", default="month", choices=["day", "week", "month", "year", "all"])
-    sr.add_argument("--tz", type=float, default=0.0)
+    sr.add_argument("subreddit", help=_SUB_HELP)
+    sr.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Time window (default: month)")
+    sr.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
 
-    spl = sub.add_parser("plan", help="Growth plan: pick the best safe sub and its viral recipe")
-    spl.add_argument("subreddits", nargs="+")
-    spl.add_argument("--window", default="30d")
-    spl.add_argument("--tz", type=float, default=0.0)
+    spl = sub.add_parser("plan", help="Growth plan: best safe target, cross-posts, recipe, timing")
+    spl.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
+    spl.add_argument("--window", default="30d", help="Archive lookback (default: 30d)")
+    spl.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
     spl.add_argument("--md", action="store_true", help="Output the plan as Markdown (for saving/sharing)")
 
-    sd = sub.add_parser("draft", help="Evaluate a post draft")
-    sd.add_argument("subreddit")
-    sd.add_argument("--title", required=True)
-    sd.add_argument("--body", default="")
-    sd.add_argument("--type", default="text", dest="post_type")
-    sd.add_argument("--flair", default=None)
-    sd.add_argument("--tz", type=float, default=0.0, help="Local UTC offset for posting times")
+    sd = sub.add_parser("draft", help="Score a draft: acceptance risk + performance + fixes")
+    sd.add_argument("subreddit", help=_SUB_HELP)
+    sd.add_argument("--title", required=True, help="Draft post title")
+    sd.add_argument("--body", default="", help="Draft self-text body (optional)")
+    sd.add_argument("--type", default="text", dest="post_type", help="text | image | video | link (default: text)")
+    sd.add_argument("--flair", default=None, help="Intended flair (optional)")
+    sd.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
 
     sf = sub.add_parser("fit", help="Score one draft across subs, ranked by size-fair fit")
-    sf.add_argument("subreddits", nargs="+")
-    sf.add_argument("--title", required=True)
-    sf.add_argument("--type", default="text", dest="post_type")
-    sf.add_argument("--flair", default=None)
+    sf.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
+    sf.add_argument("--title", required=True, help="Draft post title")
+    sf.add_argument("--type", default="text", dest="post_type", help="text | image | video | link (default: text)")
+    sf.add_argument("--flair", default=None, help="Intended flair (optional)")
 
     args = p.parse_args(argv)
     reddit = _get_reddit()
-    if reddit is None and args.cmd in {"patterns", "acceptance", "compare", "draft"}:
-        print("(no Reddit credentials — using archive mode)", file=sys.stderr)
+    if reddit is None and args.cmd in {"acceptance", "draft", "report"}:
+        print(
+            "Note: no Reddit credentials set — running credential-free (archive only). "
+            "Official rules aren't loaded; add REDDIT_CLIENT_ID/SECRET in .env for exact rule checks.",
+            file=sys.stderr,
+        )
 
     if args.cmd == "patterns":
         result = analyze_post_patterns(args.subreddit, reddit, "top", args.time, args.limit, "auto", args.metric)
@@ -508,5 +540,18 @@ def main(argv=None) -> int:
     return 0
 
 
+def run() -> int:
+    """Entry point with graceful handling of interrupts and unexpected errors."""
+    try:
+        return main()
+    except KeyboardInterrupt:
+        print("\nInterrupted.", file=sys.stderr)
+        return 130
+    except Exception as e:  # keep the traceback out of the user's face
+        print(f"Error: {e}", file=sys.stderr)
+        print("If this persists, the Arctic archive may be rate-limited — retry shortly.", file=sys.stderr)
+        return 1
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(run())
