@@ -151,11 +151,11 @@ def _print_compare(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
     _hr(f"SUBREDDIT COMPARISON  (ranked by {d.get('ranked_by', 'viral')})")
-    print(f"{'subreddit':20} {'viral':>7} {'ceiling':>8} {'typical':>8} {'comments':>9} {'removal':>8}  conf")
+    print(f"{'subreddit':20} {'viral':>7} {'ceiling':>8} {'comments':>9} {'removal':>8} {'safety':>9}  conf")
     for p in d["ranked"]:
         conf = "low*" if p.get("low_confidence") else "ok"
         print(f"  r/{p['subreddit']:17} {p.get('viral_potential', 0):>7} {p.get('viral_ceiling', 0):>8} "
-              f"{p['median_score']:>8} {p.get('median_comments', 0):>9} {p['removal_rate']:>7.0%}  {conf}")
+              f"{p.get('median_comments', 0):>9} {p['removal_rate']:>7.0%} {p.get('safety', '-'):>9}  {conf}")
     if any(p.get("low_confidence") for p in d["ranked"]):
         print("  * low = many AutoMod-filtered posts; add creds for accuracy")
     for f in d.get("failed", []):

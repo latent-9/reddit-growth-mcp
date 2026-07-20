@@ -44,10 +44,15 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
         media[r["media_type"]] = media.get(r["media_type"], 0) + 1
     top_media = max(media, key=media.get) if media else None
 
+    # Safety = how likely a rule-abiding post survives (mean-mod risk).
+    safety = ("safe" if removal_rate < 0.15
+              else "moderate" if removal_rate < 0.35 else "strict")
+
     return {
         "subreddit": name,
         "sampled": len(rows),
         "removal_rate": removal_rate,
+        "safety": safety,
         "median_score": median_score,
         "median_comments": median_comments,
         "viral_ceiling": ceiling,
