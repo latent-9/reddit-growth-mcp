@@ -18,7 +18,7 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     if not posts:
         return {"subreddit": name, "error": "no archived posts (or rate-limited)"}
 
-    rows = [features_from_arctic(p) for p in posts]
+    rows = [f for f in (features_from_arctic(p) for p in posts) if not f.get("recurring")]
     live = [r for r in rows if r["removal_status"] == "live"]
     removed = [r for r in rows if r["removal_status"] == "mod_removed"]
     filtered = [r for r in rows if r["removal_status"] == "filtered"]

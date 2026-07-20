@@ -42,6 +42,21 @@ _SHOWCASE_PATTERN = re.compile(
 )
 
 
+_MEGATHREAD = re.compile(
+    r"\b(mega ?thread|daily (discussion|thread|general|chat)|"
+    r"weekly (discussion|thread|recap|help|showoff)|monthly (discussion|thread)|"
+    r"discussion thread|simple questions|no stupid questions|moronic monday|"
+    r"ask me anything|free[- ]?talk|what are you working on|who'?s hiring)\b",
+    re.I,
+)
+
+
+def is_recurring_thread(title: str) -> bool:
+    """True for recurring official threads (megathreads, AMAs, daily/weekly),
+    which carry outsized scores/comments and distort per-post patterns."""
+    return bool(_MEGATHREAD.search(title or ""))
+
+
 def classify_removal(submission: Any) -> str:
     """Classify how a post was removed, best-effort without mod permissions.
 
@@ -139,6 +154,7 @@ def submission_to_features(submission: Any) -> Dict[str, Any]:
         "created_utc": created,
     }
     features["clickbait"] = clickbait_score(title)
+    features["recurring"] = is_recurring_thread(title)
     features.update(extract_title_features(title))
     if created:
         features.update(extract_time_features(created))

@@ -17,6 +17,7 @@ from src.analysis.helpers import (
     engagement_ratio,
     metric_value,
     trimmed_mean,
+    is_recurring_thread,
 )
 
 
@@ -115,6 +116,16 @@ def test_winning_keywords():
 
 def test_winning_keywords_small_sample_returns_empty():
     assert winning_keywords([{"title": "hi", "score": 1}]) == []
+
+
+def test_is_recurring_thread():
+    assert is_recurring_thread("Daily Discussion Thread - July 20")
+    assert is_recurring_thread("Weekly Showoff Saturday")
+    assert is_recurring_thread("Simple Questions megathread")
+    assert is_recurring_thread("Who's hiring? July")
+    # Normal project posts are not flagged.
+    assert not is_recurring_thread("I built an ASCII art generator")
+    assert not is_recurring_thread("[Hyprland] my first rice")
 
 
 def test_trimmed_mean():

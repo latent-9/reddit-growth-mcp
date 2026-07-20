@@ -43,8 +43,9 @@ def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str
     else:
         posts = arctic.fetch_many_posts(name, after=_ARCHIVE_WINDOW.get(time_filter, "60d"),
                                         before="2d", target=max(limit, 100))
-    return [features_from_arctic(p) for p in posts
+    rows = [features_from_arctic(p) for p in posts
             if not p.get("stickied") and p.get("removed_by_category") is None]
+    return [r for r in rows if not r.get("recurring")]  # drop megathreads/AMAs
 
 
 def _median(vals: List[float]) -> float:
@@ -208,6 +209,7 @@ def analyze_post_patterns(
                        else sub.hot(limit=limit) if listing_type == "hot"
                        else sub.new(limit=limit))
             rows = [submission_to_features(p) for p in listing if not p.stickied]
+            rows = [r for r in rows if not r.get("recurring")]
             source_label = f"{listing_type}/{time_filter if listing_type == 'top' else ''}".rstrip("/")
         except NotFound:
             return {"error": f"Subreddit r/{name} not found", "status_code": 404}
