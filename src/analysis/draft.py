@@ -178,6 +178,37 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
     }
 
 
+def _viral_alignment(title: str, post_type: str, flair, patterns: Dict[str, Any]):
+    """How closely the draft matches this sub's viral recipe (top-decile DNA)."""
+    vp = patterns.get("viral_profile", {})
+    if not vp.get("available"):
+        return None
+    rc = vp["recipe"]
+    tf = extract_title_features(title)
+    checks: Dict[str, bool] = {"media": post_type == rc["media_type"]["value"]}
+    if rc["flair"]["value"]:
+        checks["flair"] = flair == rc["flair"]["value"]
+    checks["title_length"] = abs(tf["char_length"] - rc["title"]["median_char_length"]) <= 20
+    for rk, feat in [("has_number", "has_number"), ("showcase", "is_showcase"),
+                     ("question", "is_question")]:
+        if rc["title"].get(rk, {}).get("overrepresented"):
+            checks[rk] = bool(tf.get(feat))
+    kws = rc.get("keywords", [])
+    if kws:
+        checks["keyword"] = any(w in title.lower() for w in kws)
+
+    matched = sum(1 for v in checks.values() if v)
+    total = len(checks) or 1
+    return {
+        "alignment_pct": round(100 * matched / total),
+        "matched": matched,
+        "total": total,
+        "missing": [k for k, v in checks.items() if not v],
+        "recipe": {"media": rc["media_type"]["value"], "flair": rc["flair"]["value"],
+                   "time_block_utc": rc["time_block_utc"]["value"], "keywords": kws[:6]},
+    }
+
+
 def evaluate_draft(
     subreddit_name: str,
     title: str,
@@ -199,6 +230,7 @@ def evaluate_draft(
 
     compliance = _check_compliance(title, body, post_type, flair, acceptance)
     prediction = _predict_performance(title, post_type, flair, patterns)
+    viral = _viral_alignment(title, post_type, flair, patterns)
 
     if compliance["blocking_issues"]:
         verdict = "likely_removed"
@@ -221,6 +253,7 @@ def evaluate_draft(
         "baseline_avg_score": prediction["baseline_avg_score"],
         "clickbait_risk": prediction["clickbait_risk"],
         "sub_clickbait_verdict": prediction["sub_clickbait_verdict"],
+        "viral_alignment": viral,
         "score_drivers": prediction["drivers"],
         "suggestions": prediction["suggestions"],
         "best_posting_hours_utc": patterns.get("best_posting_hours_utc", [])[:3],

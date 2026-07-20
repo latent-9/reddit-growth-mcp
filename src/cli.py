@@ -175,6 +175,14 @@ def _print_draft(d: dict) -> None:
           f"projected score ~{d['projected_score']} (sub avg {d['baseline_avg_score']})")
     if d.get("clickbait_risk", 0) >= 0.4:
         print(f"Clickbait risk: {d['clickbait_risk']} (sub verdict: {d.get('sub_clickbait_verdict')})")
+    va = d.get("viral_alignment")
+    if va:
+        print(f"Viral-recipe match: {va['alignment_pct']}% ({va['matched']}/{va['total']} traits)")
+        if va.get("missing"):
+            print(f"  Missing for viral: {', '.join(va['missing'])}")
+        rc = va["recipe"]
+        print(f"  Viral recipe: {rc['media']} / flair {rc['flair']} / {rc['time_block_utc']}"
+              + (f" / words {rc['keywords']}" if rc.get("keywords") else ""))
     if d.get("blocking_issues"):
         _hr("Blocking issues (likely removal)")
         for i in d["blocking_issues"]:
