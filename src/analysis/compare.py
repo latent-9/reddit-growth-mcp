@@ -47,6 +47,9 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     # here, discounted by removal risk. This is what matters for going viral.
     ceiling = percentile(sorted(live_scores), VIRAL_PERCENTILE) if live_scores else 0
     viral_potential = round(ceiling * (1 - removal_rate), 1)
+    # Growth score: reliable typical reach (steady karma) plus a fraction of the
+    # viral upside. Both already discount removal risk, so safe + active subs win.
+    growth_score = round(opportunity + 0.3 * viral_potential, 1)
 
     media = {}
     for r in live:
@@ -67,6 +70,7 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
         "median_comments": median_comments,
         "viral_ceiling": ceiling,
         "viral_potential": viral_potential,
+        "growth_score": growth_score,
         "avg_score": safe_mean(live_scores),
         "best_media": top_media,
         "opportunity_score": opportunity,
@@ -79,13 +83,14 @@ def compare_subreddits(
     subreddits: Union[str, List[str]],
     window: str = "60d",
     sample: int = 200,
-    rank_by: str = "viral",
+    rank_by: str = "growth",
     ctx: Any = None,
 ) -> Dict[str, Any]:
     """Profile and rank subreddits (no creds needed).
 
-    rank_by: 'viral' ranks by viral potential (upside of a strong post);
-    'opportunity' ranks by the reach of a typical post.
+    rank_by: 'growth' (default) balances reliable reach and viral upside for
+    account growth; 'viral' ranks by viral upside alone; 'opportunity' ranks by
+    the reach of a typical post.
     """
     if isinstance(subreddits, str):
         subreddits = [subreddits]
@@ -93,15 +98,18 @@ def compare_subreddits(
     if not names:
         return {"error": "Provide at least one subreddit name"}
 
-    sort_key = "viral_potential" if rank_by == "viral" else "opportunity_score"
+    sort_key = {"viral": "viral_potential", "opportunity": "opportunity_score",
+                "growth": "growth_score"}.get(rank_by, "growth_score")
     profiles = [_profile_subreddit(n, window, sample) for n in names]
     ranked = [p for p in profiles if "error" not in p]
     ranked.sort(key=lambda p: p[sort_key], reverse=True)
     failed = [p for p in profiles if "error" in p]
 
-    criteria = ("viral potential = 90th-percentile reach × (1 − removal rate)"
-                if rank_by == "viral"
-                else "opportunity = median reach × (1 − removal rate)")
+    criteria = {
+        "growth": "growth = typical reach + 0.3 × viral potential (both removal-adjusted)",
+        "viral": "viral potential = 90th-percentile reach × (1 − removal rate)",
+        "opportunity": "opportunity = median reach × (1 − removal rate)",
+    }.get(rank_by, "growth")
     return {
         "ranked": ranked,
         "failed": failed,

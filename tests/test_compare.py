@@ -59,6 +59,11 @@ def test_ranking_and_rank_by(stub_arctic, monkeypatch):
     by_opp = compare.compare_subreddits(["testA", "testB"], rank_by="opportunity")
     assert by_opp["best_pick"] == "testB"  # steady typical wins for opportunity
 
+    # Growth blends both and is the default.
+    default = compare.compare_subreddits(["testA", "testB"])
+    assert default["ranked_by"] == "growth"
+    assert all("growth_score" in p for p in default["ranked"])
+
 
 def test_empty_input():
     assert "error" in compare.compare_subreddits([])

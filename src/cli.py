@@ -151,10 +151,10 @@ def _print_compare(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
     _hr(f"SUBREDDIT COMPARISON  (ranked by {d.get('ranked_by', 'viral')})")
-    print(f"{'subreddit':20} {'viral':>7} {'ceiling':>8} {'posts/day':>10} {'comments':>9} {'removal':>8} {'safety':>9}  conf")
+    print(f"{'subreddit':20} {'growth':>7} {'viral':>7} {'posts/day':>10} {'comments':>9} {'removal':>8} {'safety':>9}  conf")
     for p in d["ranked"]:
         conf = "low*" if p.get("low_confidence") else "ok"
-        print(f"  r/{p['subreddit']:17} {p.get('viral_potential', 0):>7} {p.get('viral_ceiling', 0):>8} "
+        print(f"  r/{p['subreddit']:17} {p.get('growth_score', 0):>7} {p.get('viral_potential', 0):>7} "
               f"{p.get('posts_per_day', 0):>10} {p.get('median_comments', 0):>9} "
               f"{p['removal_rate']:>7.0%} {p.get('safety', '-'):>9}  {conf}")
     if any(p.get("low_confidence") for p in d["ranked"]):
@@ -233,8 +233,8 @@ def main(argv=None) -> int:
     sc.add_argument("subreddits", nargs="+")
     sc.add_argument("--window", default="60d")
     sc.add_argument("--sample", type=int, default=200)
-    sc.add_argument("--rank-by", dest="rank_by", default="viral",
-                    choices=["viral", "opportunity"])
+    sc.add_argument("--rank-by", dest="rank_by", default="growth",
+                    choices=["growth", "viral", "opportunity"])
 
     sr = sub.add_parser("report", help="Full report: acceptance + patterns for a subreddit")
     sr.add_argument("subreddit")
