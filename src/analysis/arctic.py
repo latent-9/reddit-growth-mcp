@@ -145,6 +145,30 @@ def fetch_many_posts(
     return out[:target]
 
 
+def fetch_recent_comments(
+    subreddit: str,
+    after: str = "3d",
+    limit: int = 100,
+    sort: str = "desc",
+) -> List[Dict[str, Any]]:
+    """Fetch recent comments for a subreddit (for discussion-depth analysis).
+
+    The comments endpoint is heavier than posts; keep windows modest to avoid
+    server-side timeouts (surfaced as retryable 422s).
+    """
+    data = _get(
+        "/api/comments/search",
+        {
+            "subreddit": subreddit,
+            "after": after,
+            "limit": max(1, min(limit, 100)),
+            "sort": sort,
+        },
+    )
+    payload = data.get("data", data)
+    return payload if isinstance(payload, list) else []
+
+
 def fetch_stratified(
     subreddit: str,
     window_days: int = 60,

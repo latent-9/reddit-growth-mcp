@@ -23,6 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.analysis.acceptance import analyze_acceptance as _analyze_acceptance
 from src.analysis.compare import compare_subreddits as _compare_subreddits
 from src.analysis.draft import evaluate_draft as _evaluate_draft
+from src.analysis.insight import analyze_insight as _analyze_insight
 from src.analysis.patterns import analyze_post_patterns as _analyze_post_patterns
 from src.analysis.plan import build_growth_plan as _build_growth_plan
 from src.analysis.traffic import (
@@ -187,6 +188,19 @@ def compare_subreddits(
     ctx: Context = None,
 ) -> Dict[str, Any]:
     return _compare_subreddits(subreddits, window, sample, rank_by, ctx)
+
+
+@mcp.tool(
+    description="Measure a subreddit's discussion depth (insight): how substantive its comments are. No creds needed.",
+    annotations={"readOnlyHint": True},
+)
+def analyze_insight(
+    subreddit_name: Annotated[str, "Subreddit name (without r/)"],
+    after: Annotated[str, "Comment lookback window, e.g. 3d/7d"] = "3d",
+    sample: Annotated[int, "Comments to sample"] = 100,
+    ctx: Context = None,
+) -> Dict[str, Any]:
+    return _analyze_insight(subreddit_name, after, sample, ctx)
 
 
 @mcp.tool(

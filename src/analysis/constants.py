@@ -21,3 +21,8 @@ LOW_CONFIDENCE_FILTERED_RATIO = 0.3
 
 # Minimum posts a category/time bucket needs to be reported as reliable.
 MIN_BUCKET_SAMPLES = 3
+
+# Discussion-depth ("insight") thresholds, in comment characters.
+INSIGHT_SUBSTANTIVE_CHARS = 200  # a comment this long counts as substantive
+INSIGHT_HIGH_MEDIAN_CHARS = 200  # median at/above this -> high-insight sub
+INSIGHT_LOW_MEDIAN_CHARS = 90  # median below this -> low-insight (one-liners)

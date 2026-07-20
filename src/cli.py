@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 from src.analysis.acceptance import analyze_acceptance
 from src.analysis.compare import compare_subreddits
 from src.analysis.draft import evaluate_draft
+from src.analysis.insight import analyze_insight
 from src.analysis.patterns import analyze_post_patterns
 from src.analysis.plan import build_growth_plan
 from src.analysis.traffic import estimate_activity_archive
@@ -268,6 +269,17 @@ def _print_traffic(d: dict) -> None:
     )
 
 
+def _print_insight(d: dict) -> None:
+    if "error" in d:
+        print("Error:", d["error"])
+        return
+    print(f"\nr/{d['subreddit']} — insight (discussion depth): {d['insight_tier']}")
+    print(
+        f"  median comment {d['median_comment_chars']} chars / {d['median_comment_words']} words · "
+        f"{d['substantive_ratio']:.0%} substantive (sample {d['sampled_comments']})"
+    )
+
+
 def _run_plan(args, reddit) -> None:
     """Growth planner: rank subs, pick the safest strong one, print its recipe."""
     plan = build_growth_plan(args.subreddits, reddit, args.window)
@@ -340,6 +352,10 @@ def main(argv=None) -> int:
     st_.add_argument("subreddit")
     st_.add_argument("--window", default="30d")
 
+    si = sub.add_parser("insight", help="Measure a subreddit's discussion depth (comment substance)")
+    si.add_argument("subreddit")
+    si.add_argument("--after", default="3d")
+
     sc = sub.add_parser("compare", help="Rank subreddits by viral potential or opportunity")
     sc.add_argument("subreddits", nargs="+")
     sc.add_argument("--window", default="60d")
@@ -386,6 +402,9 @@ def main(argv=None) -> int:
     elif args.cmd == "traffic":
         result = estimate_activity_archive(args.subreddit, args.window)
         printer = _print_traffic
+    elif args.cmd == "insight":
+        result = analyze_insight(args.subreddit, args.after)
+        printer = _print_insight
     elif args.cmd == "plan":
         _run_plan(args, reddit)
         return 0
