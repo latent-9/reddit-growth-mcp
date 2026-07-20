@@ -476,7 +476,7 @@ def main(argv=None) -> int:
     st_.add_argument("subreddit", help=_SUB_HELP)
     st_.add_argument("--window", default="30d", help="Archive lookback, e.g. 7d/30d (default: 30d)")
 
-    si = sub.add_parser("insight", help="Measure discussion depth (how substantive comments are)")
+    si = sub.add_parser("insight", help="Measure discussion depth (comment substance) and sentiment")
     si.add_argument("subreddit", help=_SUB_HELP)
     si.add_argument("--after", default="3d", help="Comment lookback, e.g. 3d/7d (default: 3d)")
 

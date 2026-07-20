@@ -72,7 +72,7 @@ Add `-h` to any command for help, e.g. `uv run python -m src.cli plan -h`.
 | --- | --- | --- |
 | `analyze_post_patterns` | What performs in a sub: timing, media, title style, flair, keywords, by a configurable metric | No |
 | `analyze_acceptance` | Removal rate and what tends to get removed; official rules when credentials are present | No |
-| `compare_subreddits` | Rank subreddits by viral potential, with traffic (posts/day), discussion, removal risk, and a safety label | No |
+| `compare_subreddits` | Rank subreddits by growth (typical reach + viral upside), with traffic (posts/day), discussion, removal risk, and a safety label; `rank_by` switches to viral/opportunity/insight | No |
 | `analyze_insight` | Discussion depth (comment substance) plus a heuristic sentiment read (supportive/mixed/critical) — not just comment count | No |
 | `growth_plan` | One call: safest strong target, cross-post options, viral recipe, and best posting times | No |
 | `evaluate_draft` | Predict a draft's performance (0-100) and acceptance risk, with drivers and fixes | No |

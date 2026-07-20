@@ -113,7 +113,10 @@ def find_target_subreddits_tool(
 
 
 @mcp.tool(
-    description="Estimate a subreddit's reach (subscribers, active users, velocity)",
+    description=(
+        "Estimate a subreddit's activity (posts/day velocity from the archive; "
+        "subscribers and active users too when credentials are present)"
+    ),
     annotations={"readOnlyHint": True},
 )
 def analyze_subreddit(
@@ -128,7 +131,7 @@ def analyze_subreddit(
 
 
 @mcp.tool(
-    description="Analyze a subreddit's rules and what tends to get removed",
+    description="Analyze a subreddit's removal rate and what tends to get removed (official rules when credentials are present)",
     annotations={"readOnlyHint": True},
 )
 def analyze_acceptance(
@@ -197,7 +200,11 @@ def evaluate_draft_across(
 
 
 @mcp.tool(
-    description="Rank subreddits by posting opportunity (removal risk vs reach). No creds needed.",
+    description=(
+        "Rank subreddits by growth (typical reach + viral upside, removal-adjusted), "
+        "with traffic, discussion, and a safety label. rank_by switches to "
+        "viral/opportunity/insight. No creds needed."
+    ),
     annotations={"readOnlyHint": True},
 )
 def compare_subreddits(
@@ -211,7 +218,7 @@ def compare_subreddits(
 
 
 @mcp.tool(
-    description="Measure a subreddit's discussion depth (insight): how substantive its comments are. No creds needed.",
+    description="Measure a subreddit's discussion depth (insight): how substantive its comments are, plus a heuristic sentiment read. No creds needed.",
     annotations={"readOnlyHint": True},
 )
 def analyze_insight(
