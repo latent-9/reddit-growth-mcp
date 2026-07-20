@@ -23,6 +23,7 @@ from src.analysis.acceptance import analyze_acceptance
 from src.analysis.compare import compare_subreddits
 from src.analysis.draft import evaluate_draft
 from src.analysis.patterns import analyze_post_patterns
+from src.analysis.plan import build_growth_plan
 from src.analysis.traffic import estimate_activity_archive
 
 load_dotenv()
@@ -269,58 +270,47 @@ def _print_traffic(d: dict) -> None:
 
 def _run_plan(args, reddit) -> None:
     """Growth planner: rank subs, pick the safest strong one, print its recipe."""
-    comp = compare_subreddits(args.subreddits, args.window, 90, "growth")
-    if "error" in comp or not comp.get("ranked"):
-        print("Could not rank subreddits:", comp.get("error", "no data"))
+    plan = build_growth_plan(args.subreddits, reddit, args.window)
+    if "error" in plan:
+        print("Could not build a plan:", plan["error"])
         return
 
-    # Prefer a safe/moderate, high-confidence sub with real growth potential.
-    eligible = [p for p in comp["ranked"] if p.get("safety") != "strict" and not p.get("low_confidence")]
-    pick = (eligible or comp["ranked"])[0]
-    name = pick["subreddit"]
-
+    t = plan["target"]
     _hr("GROWTH PLAN")
-    print(f"Target: r/{name}")
+    print(f"Target: r/{t['subreddit']}")
     print(
-        f"  growth {pick.get('growth_score')} · viral {pick.get('viral_potential')} · "
-        f"{pick.get('posts_per_day')} posts/day · {pick.get('median_comments')} comments · "
-        f"{pick['removal_rate']:.0%} removed ({pick.get('safety')})"
+        f"  growth {t['growth_score']} · viral {t['viral_potential']} · "
+        f"{t['posts_per_day']} posts/day · {t['median_comments']} comments · "
+        f"{t['removal_rate']:.0%} removed ({t['safety']})"
     )
-    skipped = [p["subreddit"] for p in comp["ranked"] if p.get("safety") == "strict" or p.get("low_confidence")]
-    if skipped:
-        print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in skipped)}")
+    if plan["avoided"]:
+        print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in plan['avoided'])}")
 
-    # Other safe/moderate subs worth cross-posting the same content to.
-    also = [p for p in (eligible or []) if p["subreddit"] != name]
-    if also:
+    if plan["also_consider"]:
         _hr("Also worth posting to (safe, tailor per sub)")
-        for p in also[:4]:
+        for p in plan["also_consider"]:
             print(
                 f"  r/{p['subreddit']:18} growth {p.get('growth_score', 0):>6} · "
                 f"{p['removal_rate']:.0%} removed ({p.get('safety')})"
             )
 
-    pat = analyze_post_patterns(name, reddit, "top", "month", 200, "auto")
-    if "error" in pat:
-        print("  (pattern read unavailable right now)")
-        return
-    vp = pat.get("viral_profile", {})
-    if vp.get("available"):
-        rc = vp["recipe"]
+    rc = plan.get("recipe")
+    if rc:
         _hr("What to post (viral recipe)")
         print(f"  Format : {rc['media_type']['value']}")
         if rc["flair"]["value"]:
             print(f"  Flair  : {rc['flair']['value']}")
+        tag = rc.get("title_tag", {})
+        if tag.get("share", 0) >= 0.3 and tag.get("common"):
+            print(f"  Tag    : {', '.join('[' + x + ']' for x in tag['common'])}")
         print(f"  Length : ~{rc['title']['median_char_length']} chars, no clickbait")
         if rc.get("keywords"):
             print(f"  Words  : work in {', '.join(rc['keywords'][:5])}")
-    hrs = pat.get("best_posting_hours_utc", [])
-    if hrs:
+    if plan["best_posting_hours_utc"]:
         _hr("When to post")
-        print("  " + " / ".join(_fmt_hour(h["hour_utc"], args.tz) for h in hrs[:3]))
-    days = pat.get("best_posting_days", [])
-    if days:
-        print("  Days: " + ", ".join(x["day"] for x in days[:2]))
+        print("  " + " / ".join(_fmt_hour(h["hour_utc"], args.tz) for h in plan["best_posting_hours_utc"]))
+    if plan["best_posting_days"]:
+        print("  Days: " + ", ".join(x["day"] for x in plan["best_posting_days"]))
 
 
 def main(argv=None) -> int:
