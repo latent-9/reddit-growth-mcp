@@ -243,6 +243,20 @@ def metric_value(row: Dict[str, Any], metric: str = "score") -> float:
     return score
 
 
+def trimmed_mean(values: List[float], trim: float = 0.1) -> float:
+    """Mean after dropping the top and bottom `trim` fraction of values.
+
+    More representative of the "typical high" than a raw mean, which a single
+    viral post can dominate.
+    """
+    if not values:
+        return 0.0
+    s = sorted(values)
+    k = int(len(s) * trim)
+    core = s[k:len(s) - k] if len(s) > 2 * k else s
+    return round(sum(core) / len(core), 2)
+
+
 def percentile(sorted_values: List[float], q: float) -> float:
     """Linear-interpolated percentile (q in 0..100) of a pre-sorted list."""
     if not sorted_values:

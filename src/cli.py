@@ -59,8 +59,9 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
     if rng:
         print(f"Coverage: {rng['oldest']} to {rng['newest']} ({d.get('sample_span_days')} days)")
     st = d["score_stats"]
-    print(f"{d.get('metric','score')}: median {st['median']} · mean {st['mean']} · max {st['max']}")
-    print("(ranked by median = typical post; mean shown for reference)")
+    print(f"{d.get('metric','score')}: median {st['median']} · trimmed-mean "
+          f"{st.get('trimmed_mean')} · mean {st['mean']} · max {st['max']}")
+    print("(ranked by median = typical post; trimmed-mean drops outliers)")
     cb = d.get("clickbait_effect", {})
     if cb:
         print(f"Clickbait here: {cb.get('verdict')} "

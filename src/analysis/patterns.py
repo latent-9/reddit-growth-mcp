@@ -18,6 +18,7 @@ from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
 from .helpers import (
     clean_subreddit_name, submission_to_features, features_from_arctic,
     safe_mean, winning_keywords, percentile, metric_value, engagement_ratio,
+    trimmed_mean,
 )
 from . import arctic
 
@@ -198,7 +199,8 @@ def analyze_post_patterns(
         "sample_date_range": date_range,
         "source": source_label,
         "metric": metric,
-        "score_stats": {"mean": safe_mean(vals), "median": _median(vals), "max": max(vals)},
+        "score_stats": {"mean": safe_mean(vals), "median": _median(vals),
+                        "trimmed_mean": trimmed_mean(vals), "max": max(vals)},
         "score_percentiles": {q: percentile(sorted(vals), q) for q in (25, 50, 75, 90, 95)},
         "engagement": {
             "median_comments_per_upvote": _median(disc_ratios),

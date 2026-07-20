@@ -16,6 +16,7 @@ from src.analysis.helpers import (
     clickbait_score,
     engagement_ratio,
     metric_value,
+    trimmed_mean,
 )
 
 
@@ -114,6 +115,14 @@ def test_winning_keywords():
 
 def test_winning_keywords_small_sample_returns_empty():
     assert winning_keywords([{"title": "hi", "score": 1}]) == []
+
+
+def test_trimmed_mean():
+    # A single huge outlier should barely move the trimmed mean.
+    vals = [10] * 18 + [1000, 1000]
+    assert trimmed_mean(vals, trim=0.1) == 10.0
+    assert trimmed_mean([]) == 0.0
+    assert trimmed_mean([5, 5, 5]) == 5.0
 
 
 def test_percentile():
