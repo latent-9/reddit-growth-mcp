@@ -1,6 +1,6 @@
 """Unit tests for the robust pattern-aggregation helpers (no network)."""
 
-from src.analysis.patterns import _median, _group_stats, _bool_lift, _clickbait_effect
+from src.analysis.patterns import _bool_lift, _clickbait_effect, _group_stats, _median
 
 
 def _rows(pairs, key="media_type"):
@@ -17,8 +17,7 @@ def test_median():
 
 def test_group_stats_min_sample_gating():
     # 'image' has 4 samples; 'video' only 1 -> video is filtered out (min_n=3).
-    rows = _rows([("image", 10), ("image", 20), ("image", 30), ("image", 100),
-                  ("video", 999)])
+    rows = _rows([("image", 10), ("image", 20), ("image", 30), ("image", 100), ("video", 999)])
     out = _group_stats(rows, "media_type", "_perf", min_n=3)
     values = [b["value"] for b in out]
     assert "image" in values
@@ -27,8 +26,7 @@ def test_group_stats_min_sample_gating():
 
 def test_group_stats_ranks_by_median_not_mean():
     # A: median 10 but one 1000 outlier; B: steady median 20.
-    rows = _rows([("A", 10), ("A", 10), ("A", 10), ("A", 1000),
-                  ("B", 20), ("B", 20), ("B", 20), ("B", 20)])
+    rows = _rows([("A", 10), ("A", 10), ("A", 10), ("A", 1000), ("B", 20), ("B", 20), ("B", 20), ("B", 20)])
     out = _group_stats(rows, "media_type", "_perf", min_n=3)
     assert out[0]["value"] == "B"  # steady beats outlier-inflated mean
     a = next(b for b in out if b["value"] == "A")

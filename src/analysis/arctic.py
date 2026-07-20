@@ -41,8 +41,9 @@ class ArcticUnavailable(Exception):
     """Raised when the Arctic Shift service can't be reached or errored."""
 
 
-def _get(path: str, params: Dict[str, Any], timeout: int = 20,
-         retries: int = 2, backoff: float = 1.5) -> Dict[str, Any]:
+def _get(
+    path: str, params: Dict[str, Any], timeout: int = 20, retries: int = 2, backoff: float = 1.5
+) -> Dict[str, Any]:
     query = urllib.parse.urlencode({k: v for k, v in params.items() if v is not None})
     url = f"{ARCTIC_BASE}{path}?{query}"
     if _CACHE_ENABLED and url in _CACHE:
@@ -91,13 +92,16 @@ def fetch_recent_posts(
     ~36h have unsettled (0/1) scores in the archive.
     Returns the raw archived post dicts.
     """
-    data = _get("/api/posts/search", {
-        "subreddit": subreddit,
-        "after": after,
-        "before": before,
-        "limit": max(1, min(limit, 100)),
-        "sort": sort,
-    })
+    data = _get(
+        "/api/posts/search",
+        {
+            "subreddit": subreddit,
+            "after": after,
+            "before": before,
+            "limit": max(1, min(limit, 100)),
+            "sort": sort,
+        },
+    )
     payload = data.get("data", data)
     return payload if isinstance(payload, list) else []
 
@@ -121,8 +125,7 @@ def fetch_many_posts(
     cursor = before
     while len(out) < target:
         try:
-            batch = fetch_recent_posts(subreddit, after=after, before=cursor,
-                                       limit=page, sort="desc")
+            batch = fetch_recent_posts(subreddit, after=after, before=cursor, limit=page, sort="desc")
         except ArcticUnavailable:
             break  # keep what we have
         if not batch:
@@ -165,8 +168,7 @@ def fetch_stratified(
         if older <= newer:
             older = newer + 1
         try:
-            batch = fetch_recent_posts(subreddit, after=f"{older}d", before=f"{newer}d",
-                                       limit=per_slice, sort="desc")
+            batch = fetch_recent_posts(subreddit, after=f"{older}d", before=f"{newer}d", limit=per_slice, sort="desc")
         except ArcticUnavailable:
             continue
         for p in batch:
@@ -191,11 +193,14 @@ def aggregate_post_frequency(
     rejects a `limit` param and requires an offset `after` (e.g. '30d') or an
     explicit `after`+`before` range.
     """
-    data = _get("/api/posts/search/aggregate", {
-        "subreddit": subreddit,
-        "after": after,
-        "aggregate": "created_utc",
-        "frequency": frequency,
-    })
+    data = _get(
+        "/api/posts/search/aggregate",
+        {
+            "subreddit": subreddit,
+            "after": after,
+            "aggregate": "created_utc",
+            "frequency": frequency,
+        },
+    )
     payload = data.get("data", data)
     return payload if isinstance(payload, list) else []

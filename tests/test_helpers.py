@@ -4,30 +4,42 @@ from types import SimpleNamespace
 
 from src.analysis.helpers import (
     classify_removal,
-    detect_media_type,
-    extract_title_features,
-    extract_time_features,
     clean_subreddit_name,
-    submission_to_features,
+    clickbait_score,
+    detect_media_type,
+    engagement_ratio,
+    extract_time_features,
+    extract_title_features,
     features_from_arctic,
-    winning_keywords,
+    is_recurring_thread,
+    metric_value,
     percentile,
     rank_percentile,
-    clickbait_score,
-    engagement_ratio,
-    metric_value,
+    submission_to_features,
     trimmed_mean,
-    is_recurring_thread,
+    winning_keywords,
 )
 
 
 def _sub(**kwargs):
     """Build a fake submission with sane defaults."""
     defaults = dict(
-        id="abc", title="Hello world", selftext="", score=10, upvote_ratio=0.9,
-        num_comments=3, link_flair_text=None, is_self=True, is_gallery=False,
-        is_video=False, over_18=False, stickied=False, permalink="/r/x/comments/abc/",
-        created_utc=1_700_000_000.0, url="https://reddit.com/x", domain="self.x",
+        id="abc",
+        title="Hello world",
+        selftext="",
+        score=10,
+        upvote_ratio=0.9,
+        num_comments=3,
+        link_flair_text=None,
+        is_self=True,
+        is_gallery=False,
+        is_video=False,
+        over_18=False,
+        stickied=False,
+        permalink="/r/x/comments/abc/",
+        created_utc=1_700_000_000.0,
+        url="https://reddit.com/x",
+        domain="self.x",
         removed_by_category=None,
     )
     defaults.update(kwargs)
@@ -73,9 +85,7 @@ def test_extract_title_features():
 def test_extract_time_features():
     tf = extract_time_features(1_700_000_000.0)
     assert 0 <= tf["hour_utc"] <= 23
-    assert tf["weekday_name"] in {
-        "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"
-    }
+    assert tf["weekday_name"] in {"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"}
 
 
 def test_submission_to_features_shape():
@@ -89,11 +99,18 @@ def test_submission_to_features_shape():
 def test_features_from_arctic():
     # Arctic returns plain dicts (with some fields absent, e.g. is_gallery).
     post = {
-        "id": "xyz", "title": "Fedora Silverblue setup notes",
-        "selftext": "steps...", "score": 120, "num_comments": 8,
-        "created_utc": 1_700_000_000, "url": "https://reddit.com/r/Fedora/x",
-        "domain": "self.Fedora", "is_self": True, "link_flair_text": "Guide",
-        "removed_by_category": None, "permalink": "/r/Fedora/comments/xyz/",
+        "id": "xyz",
+        "title": "Fedora Silverblue setup notes",
+        "selftext": "steps...",
+        "score": 120,
+        "num_comments": 8,
+        "created_utc": 1_700_000_000,
+        "url": "https://reddit.com/r/Fedora/x",
+        "domain": "self.Fedora",
+        "is_self": True,
+        "link_flair_text": "Guide",
+        "removed_by_category": None,
+        "permalink": "/r/Fedora/comments/xyz/",
     }
     feats = features_from_arctic(post)
     assert feats["score"] == 120
@@ -146,8 +163,8 @@ def test_percentile():
 
 def test_rank_percentile():
     vals = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-    assert rank_percentile(vals, 1) == 0      # nothing below the minimum
-    assert rank_percentile(vals, 6) == 50     # half below
+    assert rank_percentile(vals, 1) == 0  # nothing below the minimum
+    assert rank_percentile(vals, 6) == 50  # half below
     assert rank_percentile(vals, 100) == 100  # everything below
 
 
@@ -165,7 +182,7 @@ def test_clickbait_score():
 
 def test_engagement_ratio():
     assert engagement_ratio(100, 50) == 0.5
-    assert engagement_ratio(0, 5) == 5.0   # guards divide-by-zero
+    assert engagement_ratio(0, 5) == 5.0  # guards divide-by-zero
 
 
 def test_metric_value():
@@ -173,4 +190,4 @@ def test_metric_value():
     assert metric_value(row, "score") == 100
     assert metric_value(row, "comments") == 20
     assert metric_value(row, "discussion") == 0.2
-    assert metric_value(row, "quality") == 70.0   # 100 * (1 - 0.5*0.6)
+    assert metric_value(row, "quality") == 70.0  # 100 * (1 - 0.5*0.6)

@@ -13,15 +13,21 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 import praw
-from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
+from prawcore import Forbidden, NotFound, ResponseException, TooManyRequests
 
-from .helpers import (
-    clean_subreddit_name, submission_to_features, features_from_arctic,
-    safe_mean, winning_keywords, percentile, metric_value, engagement_ratio,
-    trimmed_mean,
-)
-from .constants import STRONG_PERCENTILE, VIRAL_PERCENTILE
 from . import arctic
+from .constants import STRONG_PERCENTILE, VIRAL_PERCENTILE
+from .helpers import (
+    clean_subreddit_name,
+    engagement_ratio,
+    features_from_arctic,
+    metric_value,
+    percentile,
+    safe_mean,
+    submission_to_features,
+    trimmed_mean,
+    winning_keywords,
+)
 
 # time_filter -> Arctic lookback window (label, days) for the archive source.
 _ARCHIVE_WINDOW = {"day": "7d", "week": "21d", "month": "60d", "year": "365d", "all": "365d"}
@@ -39,13 +45,14 @@ def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str
     if time_filter in ("month", "year", "all"):
         window_days = _WINDOW_DAYS.get(time_filter, 60)
         slices = 6 if window_days >= 300 else 4
-        posts = arctic.fetch_stratified(name, window_days=window_days,
-                                        slices=slices, per_slice=max(limit // slices, 40))
+        posts = arctic.fetch_stratified(
+            name, window_days=window_days, slices=slices, per_slice=max(limit // slices, 40)
+        )
     else:
-        posts = arctic.fetch_many_posts(name, after=_ARCHIVE_WINDOW.get(time_filter, "60d"),
-                                        before="2d", target=max(limit, 100))
-    rows = [features_from_arctic(p) for p in posts
-            if not p.get("stickied") and p.get("removed_by_category") is None]
+        posts = arctic.fetch_many_posts(
+            name, after=_ARCHIVE_WINDOW.get(time_filter, "60d"), before="2d", target=max(limit, 100)
+        )
+    rows = [features_from_arctic(p) for p in posts if not p.get("stickied") and p.get("removed_by_category") is None]
     return [r for r in rows if not r.get("recurring")]  # drop megathreads/AMAs
 
 
@@ -58,8 +65,9 @@ def _median(vals: List[float]) -> float:
     return round((s[mid] if n % 2 else (s[mid - 1] + s[mid]) / 2), 2)
 
 
-def _group_stats(rows: List[Dict[str, Any]], key: str, perf: str,
-                 min_n: int = 3, threshold: float = None) -> List[Dict[str, Any]]:
+def _group_stats(
+    rows: List[Dict[str, Any]], key: str, perf: str, min_n: int = 3, threshold: float = None
+) -> List[Dict[str, Any]]:
     """Group by a categorical feature; rank by median (outlier-robust), mean as
     tiebreak. Only buckets with >= min_n samples are eligible, so a single lucky
     post can't crown a category. When `threshold` is given, each bucket also
@@ -81,8 +89,7 @@ def _group_stats(rows: List[Dict[str, Any]], key: str, perf: str,
     return out
 
 
-def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str,
-               min_n: int = 5) -> Dict[str, Any]:
+def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str, min_n: int = 5) -> Dict[str, Any]:
     """Median performance with vs without a boolean feature, plus a reliability
     flag (both groups need >= min_n samples for the lift to be trustworthy)."""
     on = [r[perf] for r in rows if r.get(key)]
@@ -91,10 +98,15 @@ def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str,
     on_avg, off_avg = safe_mean(on), safe_mean(off)
     # Lift on means (median is often 0 in low-engagement subs).
     lift = round((on_avg / off_avg - 1) * 100, 1) if off_avg else 0.0
-    return {"with_avg_score": on_avg, "without_avg_score": off_avg,
-            "with_median": on_med, "without_median": off_med,
-            "lift_pct": lift, "sample_with": len(on),
-            "reliable": len(on) >= min_n and len(off) >= min_n}
+    return {
+        "with_avg_score": on_avg,
+        "without_avg_score": off_avg,
+        "with_median": on_med,
+        "without_median": off_med,
+        "lift_pct": lift,
+        "sample_with": len(on),
+        "reliable": len(on) >= min_n and len(off) >= min_n,
+    }
 
 
 def _clickbait_effect(rows: List[Dict[str, Any]], perf: str) -> Dict[str, Any]:
@@ -111,8 +123,13 @@ def _clickbait_effect(rows: List[Dict[str, Any]], perf: str) -> Dict[str, Any]:
         verdict = "clickbait_rewarded"
     else:
         verdict = "clickbait_neutral"
-    return {"clickbait_avg": baity_avg, "clean_avg": clean_avg,
-            "lift_pct": lift, "clickbait_sample": len(baity), "verdict": verdict}
+    return {
+        "clickbait_avg": baity_avg,
+        "clean_avg": clean_avg,
+        "lift_pct": lift,
+        "clickbait_sample": len(baity),
+        "verdict": verdict,
+    }
 
 
 def _share(rows: List[Dict[str, Any]], key: str) -> float:
@@ -130,8 +147,7 @@ def _dominant(rows: List[Dict[str, Any]], key: str):
     return val, round(c / len(rows), 2)
 
 
-def _viral_profile(rows: List[Dict[str, Any]], perf: str,
-                   threshold: float) -> Dict[str, Any]:
+def _viral_profile(rows: List[Dict[str, Any]], perf: str, threshold: float) -> Dict[str, Any]:
     """Describe what the top-decile (viral) posts have in common, and which
     traits are over-represented versus the rest — the concrete 'viral recipe'.
     """
@@ -156,8 +172,11 @@ def _viral_profile(rows: List[Dict[str, Any]], perf: str,
         "question": over("is_question"),
         "showcase": over("is_showcase"),
         "has_number": over("has_number"),
-        "clickbait": {"viral": cb_share(viral), "rest": cb_share(rest),
-                      "overrepresented": cb_share(viral) > cb_share(rest) + 0.05},
+        "clickbait": {
+            "viral": cb_share(viral),
+            "rest": cb_share(rest),
+            "overrepresented": cb_share(viral) > cb_share(rest) + 0.05,
+        },
     }
     kws = [k["word"] for k in winning_keywords(viral, top_frac=0.6, min_count=2, score_key=perf)][:8]
 
@@ -201,14 +220,21 @@ def analyze_post_patterns(
             rows = _rows_from_archive(name, time_filter, limit)
             source_label = f"archive/{_ARCHIVE_WINDOW.get(time_filter, '60d')}"
         except arctic.ArcticUnavailable as e:
-            return {"error": f"Archive unavailable: {e}", "subreddit": name,
-                    "hint": "Add Reddit credentials to use the live source."}
+            return {
+                "error": f"Archive unavailable: {e}",
+                "subreddit": name,
+                "hint": "Add Reddit credentials to use the live source.",
+            }
     else:
         try:
             sub = reddit.subreddit(name)
-            listing = (sub.top(time_filter=time_filter, limit=limit) if listing_type == "top"
-                       else sub.hot(limit=limit) if listing_type == "hot"
-                       else sub.new(limit=limit))
+            listing = (
+                sub.top(time_filter=time_filter, limit=limit)
+                if listing_type == "top"
+                else sub.hot(limit=limit)
+                if listing_type == "hot"
+                else sub.new(limit=limit)
+            )
             rows = [submission_to_features(p) for p in listing if not p.stickied]
             rows = [r for r in rows if not r.get("recurring")]
             source_label = f"{listing_type}/{time_filter if listing_type == 'top' else ''}".rstrip("/")
@@ -225,11 +251,11 @@ def analyze_post_patterns(
     # Precompute the chosen metric and derived buckets per row.
     for r in rows:
         r["_perf"] = metric_value(r, metric)
-        r["length_band"] = ("short (<40)" if r["char_length"] < 40
-                            else "medium (40-80)" if r["char_length"] <= 80 else "long (>80)")
+        r["length_band"] = (
+            "short (<40)" if r["char_length"] < 40 else "medium (40-80)" if r["char_length"] <= 80 else "long (>80)"
+        )
         h = r["hour_utc"]
-        r["time_block"] = ("00-06 UTC" if h < 6 else "06-12 UTC" if h < 12
-                           else "12-18 UTC" if h < 18 else "18-24 UTC")
+        r["time_block"] = "00-06 UTC" if h < 6 else "06-12 UTC" if h < 12 else "12-18 UTC" if h < 18 else "18-24 UTC"
     rows.sort(key=lambda r: r["_perf"], reverse=True)
 
     perf = "_perf"
@@ -262,12 +288,36 @@ def analyze_post_patterns(
         stats.sort(key=lambda d: (d.get("hit_rate", 0), d["median"]), reverse=True)
         return stats
 
-    best_hours = [{"hour_utc": b["value"], "hit_rate": b.get("hit_rate"), "median": b["median"],
-                   "mean": b["mean"], "posts": b["count"]} for b in _by_hit(rows, "hour_utc", 3)][:5]
-    time_blocks = [{"block": b["value"], "hit_rate": b.get("hit_rate"), "median": b["median"],
-                    "mean": b["mean"], "posts": b["count"]} for b in _by_hit(rows, "time_block", 5)]
-    best_days = [{"day": b["value"], "hit_rate": b.get("hit_rate"), "median": b["median"],
-                  "mean": b["mean"], "posts": b["count"]} for b in _by_hit(rows, "weekday_name", 3)]
+    best_hours = [
+        {
+            "hour_utc": b["value"],
+            "hit_rate": b.get("hit_rate"),
+            "median": b["median"],
+            "mean": b["mean"],
+            "posts": b["count"],
+        }
+        for b in _by_hit(rows, "hour_utc", 3)
+    ][:5]
+    time_blocks = [
+        {
+            "block": b["value"],
+            "hit_rate": b.get("hit_rate"),
+            "median": b["median"],
+            "mean": b["mean"],
+            "posts": b["count"],
+        }
+        for b in _by_hit(rows, "time_block", 5)
+    ]
+    best_days = [
+        {
+            "day": b["value"],
+            "hit_rate": b.get("hit_rate"),
+            "median": b["median"],
+            "mean": b["mean"],
+            "posts": b["count"],
+        }
+        for b in _by_hit(rows, "weekday_name", 3)
+    ]
 
     disc_ratios = [engagement_ratio(r["score"], r["num_comments"]) for r in rows]
 
@@ -279,8 +329,12 @@ def analyze_post_patterns(
         "sample_date_range": date_range,
         "source": source_label,
         "metric": metric,
-        "score_stats": {"mean": safe_mean(vals), "median": _median(vals),
-                        "trimmed_mean": trimmed_mean(vals), "max": max(vals)},
+        "score_stats": {
+            "mean": safe_mean(vals),
+            "median": _median(vals),
+            "trimmed_mean": trimmed_mean(vals),
+            "max": max(vals),
+        },
         "score_percentiles": {q: percentile(sorted(vals), q) for q in (25, 50, 75, 90, 95)},
         "engagement": {
             "median_comments_per_upvote": _median(disc_ratios),
@@ -303,9 +357,15 @@ def analyze_post_patterns(
         },
         "winning_keywords": winning_keywords(rows, score_key=perf),
         "top_examples": [
-            {"title": r["title"], "score": r["score"], "num_comments": r["num_comments"],
-             "clickbait": r["clickbait"], "flair": r["flair"],
-             "media_type": r["media_type"], "permalink": r["permalink"]}
+            {
+                "title": r["title"],
+                "score": r["score"],
+                "num_comments": r["num_comments"],
+                "clickbait": r["clickbait"],
+                "flair": r["flair"],
+                "media_type": r["media_type"],
+                "permalink": r["permalink"],
+            }
             for r in rows[:5]
         ],
         "disclaimer": "Empirical correlations from a sample, not Reddit's ranking algorithm.",

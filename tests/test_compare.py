@@ -5,21 +5,28 @@ import pytest
 from src.analysis import compare
 
 
-def _post(pid, score, comments=0, removed=None, title="A normal project post",
-          created=1_700_000_000):
+def _post(pid, score, comments=0, removed=None, title="A normal project post", created=1_700_000_000):
     return {
-        "id": pid, "title": title, "selftext": "", "score": score,
-        "num_comments": comments, "created_utc": created, "url": "https://reddit.com/x",
-        "domain": "self.x", "is_self": True, "link_flair_text": "Show",
-        "removed_by_category": removed, "permalink": f"/r/x/comments/{pid}/",
+        "id": pid,
+        "title": title,
+        "selftext": "",
+        "score": score,
+        "num_comments": comments,
+        "created_utc": created,
+        "url": "https://reddit.com/x",
+        "domain": "self.x",
+        "is_self": True,
+        "link_flair_text": "Show",
+        "removed_by_category": removed,
+        "permalink": f"/r/x/comments/{pid}/",
     }
 
 
 @pytest.fixture
 def stub_arctic(monkeypatch):
     def _install(posts):
-        monkeypatch.setattr(compare.arctic, "fetch_many_posts",
-                            lambda *a, **k: posts)
+        monkeypatch.setattr(compare.arctic, "fetch_many_posts", lambda *a, **k: posts)
+
     return _install
 
 
@@ -51,8 +58,7 @@ def test_ranking_and_rank_by(stub_arctic, monkeypatch):
     a = [_post(f"a{i}", s) for i, s in enumerate([1, 1, 1, 1, 1, 1, 1, 1, 500, 900])]
     b = [_post(f"b{i}", 30) for i in range(10)]
     calls = {"testA": a, "testB": b}
-    monkeypatch.setattr(compare.arctic, "fetch_many_posts",
-                        lambda name, *a2, **k: calls[name])
+    monkeypatch.setattr(compare.arctic, "fetch_many_posts", lambda name, *a2, **k: calls[name])
 
     by_viral = compare.compare_subreddits(["testA", "testB"], rank_by="viral")
     assert by_viral["best_pick"] == "testA"  # high ceiling wins for viral
@@ -70,8 +76,7 @@ def test_rank_by_insight(monkeypatch):
     a = [_post(f"a{i}", 500, comments=1) for i in range(10)]
     b = [_post(f"b{i}", 30, comments=40) for i in range(10)]
     calls = {"testA": a, "testB": b}
-    monkeypatch.setattr(compare.arctic, "fetch_many_posts",
-                        lambda name, *a2, **k: calls[name])
+    monkeypatch.setattr(compare.arctic, "fetch_many_posts", lambda name, *a2, **k: calls[name])
     out = compare.compare_subreddits(["testA", "testB"], rank_by="insight")
     assert out["best_pick"] == "testB"  # more discussion wins for insight
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from datetime import datetime, timezone
 from types import SimpleNamespace
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Reddit's removed_by_category values that indicate a *confirmed* moderator or
 # admin removal (as opposed to the author deleting their own post).
@@ -28,18 +28,27 @@ FILTERED_CATEGORIES = {"automod_filtered"}
 AUTHOR_REMOVAL_CATEGORIES = {"deleted", "author"}
 
 _QUESTION_STARTERS = (
-    "how", "what", "why", "when", "who", "which", "where",
-    "is", "are", "can", "should", "does", "do", "will", "would",
+    "how",
+    "what",
+    "why",
+    "when",
+    "who",
+    "which",
+    "where",
+    "is",
+    "are",
+    "can",
+    "should",
+    "does",
+    "do",
+    "will",
+    "would",
 )
 _LIST_PATTERN = re.compile(r"\b(\d+)\s+(ways|things|tips|reasons|best|top)\b", re.I)
 _NUMBER_PATTERN = re.compile(r"\d")
 _BRACKET_PATTERN = re.compile(r"[\[\(].+?[\]\)]")
-_EMOJI_PATTERN = re.compile(
-    "[\U0001F300-\U0001FAFF\U00002600-\U000027BF\U0001F1E6-\U0001F1FF]"
-)
-_SHOWCASE_PATTERN = re.compile(
-    r"\b(i (made|built|created|drew|designed|coded)|my first|showcase|oc)\b", re.I
-)
+_EMOJI_PATTERN = re.compile("[\U0001f300-\U0001faff\U00002600-\U000027bf\U0001f1e6-\U0001f1ff]")
+_SHOWCASE_PATTERN = re.compile(r"\b(i (made|built|created|drew|designed|coded)|my first|showcase|oc)\b", re.I)
 
 
 _MEGATHREAD = re.compile(
@@ -208,10 +217,13 @@ _CLICKBAIT_PHRASES = re.compile(
     r"changed my life|this simple trick|will never be the same)\b",
     re.I,
 )
-_HYPE_WORDS = re.compile(r"\b(amazing|incredible|unbelievable|epic|ultimate|"
-                         r"revolutionary|insane|insanely|crazy|ridiculously|"
-                         r"mind[- ]blowing|perfect|best ever|100%)\b", re.I)
-_EMOJI = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF]")
+_HYPE_WORDS = re.compile(
+    r"\b(amazing|incredible|unbelievable|epic|ultimate|"
+    r"revolutionary|insane|insanely|crazy|ridiculously|"
+    r"mind[- ]blowing|perfect|best ever|100%)\b",
+    re.I,
+)
+_EMOJI = re.compile("[\U0001f300-\U0001faff\U00002600-\U000027bf]")
 
 
 def clickbait_score(title: str) -> float:
@@ -269,7 +281,7 @@ def trimmed_mean(values: List[float], trim: float = 0.1) -> float:
         return 0.0
     s = sorted(values)
     k = int(len(s) * trim)
-    core = s[k:len(s) - k] if len(s) > 2 * k else s
+    core = s[k : len(s) - k] if len(s) > 2 * k else s
     return round(sum(core) / len(core), 2)
 
 
@@ -327,8 +339,7 @@ def winning_keywords(
     def doc_counts(rs: List[Dict[str, Any]]) -> Dict[str, int]:
         c: Dict[str, int] = {}
         for r in rs:
-            words = {w for w in _TOKEN.findall((r.get("title") or "").lower())
-                     if w not in _STOPWORDS and len(w) > 2}
+            words = {w for w in _TOKEN.findall((r.get("title") or "").lower()) if w not in _STOPWORDS and len(w) > 2}
             for w in words:
                 c[w] = c.get(w, 0) + 1
         return c
@@ -341,12 +352,14 @@ def winning_keywords(
             continue
         top_rate = ct / n_top
         rest_rate = (rc.get(w, 0) + 0.5) / (n_rest + 1)  # smoothed
-        results.append({
-            "word": w,
-            "count_in_top": ct,
-            "top_rate": round(top_rate, 2),
-            "lift": round(top_rate / rest_rate, 1),
-        })
+        results.append(
+            {
+                "word": w,
+                "count_in_top": ct,
+                "top_rate": round(top_rate, 2),
+                "lift": round(top_rate / rest_rate, 1),
+            }
+        )
     results.sort(key=lambda d: d["lift"], reverse=True)
     return results[:n]
 

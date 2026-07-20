@@ -11,10 +11,10 @@ from __future__ import annotations
 from typing import Any, Dict, List, Union
 
 import praw
-from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
+from prawcore import Forbidden, NotFound, ResponseException, TooManyRequests
 
-from .helpers import clean_subreddit_name, safe_mean, features_from_arctic
 from . import arctic
+from .helpers import clean_subreddit_name, features_from_arctic, safe_mean
 
 
 def _velocity_tier(posts_per_day: float) -> str:
@@ -68,8 +68,10 @@ def estimate_activity_archive(
             "span_days": round(span_days, 1),
         },
         "activity_tier": _velocity_tier(posts_per_day),
-        "disclaimer": ("Velocity-based estimate from public archive data. Reddit "
-                       "does not expose subscriber or visitor counts publicly."),
+        "disclaimer": (
+            "Velocity-based estimate from public archive data. Reddit "
+            "does not expose subscriber or visitor counts publicly."
+        ),
     }
 
 
@@ -106,10 +108,16 @@ def estimate_subreddit_traffic(
     except Forbidden:
         return {"error": f"r/{name} is private or banned", "status_code": 403}
     except TooManyRequests as e:
-        return {"error": "Rate limited by Reddit", "status_code": 429,
-                "retry_after_seconds": getattr(e, "retry_after", None)}
+        return {
+            "error": "Rate limited by Reddit",
+            "status_code": 429,
+            "retry_after_seconds": getattr(e, "retry_after", None),
+        }
     except ResponseException as e:
-        return {"error": f"Reddit API error: {e}", "status_code": getattr(getattr(e, "response", None), "status_code", None)}
+        return {
+            "error": f"Reddit API error: {e}",
+            "status_code": getattr(getattr(e, "response", None), "status_code", None),
+        }
 
     # Posting velocity from the newest posts.
     posts_per_day = 0.0
@@ -132,11 +140,7 @@ def estimate_subreddit_traffic(
     #   - subscribers contribute a small daily return-visit fraction
     #   - engagement (comments/day) is a lurker-to-visitor multiplier
     comments_per_day = posts_per_day * comments_per_post
-    estimated_daily_visitors = int(
-        active * 12
-        + subscribers * 0.02
-        + comments_per_day * 5
-    )
+    estimated_daily_visitors = int(active * 12 + subscribers * 0.02 + comments_per_day * 5)
 
     return {
         "subreddit": name,
@@ -183,9 +187,8 @@ def find_target_subreddits(
                     continue
                 seen[key] = {"subreddit_obj": sub, "matched_topics": [topic]}
         except TooManyRequests:
-            return {"error": "Rate limited by Reddit during search", "status_code": 429,
-                    "partial_results": len(seen)}
-        except ResponseException as e:
+            return {"error": "Rate limited by Reddit during search", "status_code": 429, "partial_results": len(seen)}
+        except ResponseException:
             continue  # skip a failing topic, keep going
 
     results: List[Dict[str, Any]] = []
@@ -196,17 +199,19 @@ def find_target_subreddits(
             continue
         if est["signals"]["subscribers"] < min_subscribers:
             continue
-        results.append({
-            "subreddit": est["subreddit"],
-            "matched_topics": entry["matched_topics"],
-            "subscribers": est["signals"]["subscribers"],
-            "active_users_now": est["signals"]["active_users_now"],
-            "posts_per_day_est": est["signals"]["posts_per_day_est"],
-            "avg_score_recent": est["signals"]["avg_score_recent"],
-            "estimated_daily_visitors": est["estimated_daily_visitors"],
-            "activity_tier": est["activity_tier"],
-            "meets_threshold": est["estimated_daily_visitors"] >= min_daily_visitors,
-        })
+        results.append(
+            {
+                "subreddit": est["subreddit"],
+                "matched_topics": entry["matched_topics"],
+                "subscribers": est["signals"]["subscribers"],
+                "active_users_now": est["signals"]["active_users_now"],
+                "posts_per_day_est": est["signals"]["posts_per_day_est"],
+                "avg_score_recent": est["signals"]["avg_score_recent"],
+                "estimated_daily_visitors": est["estimated_daily_visitors"],
+                "activity_tier": est["activity_tier"],
+                "meets_threshold": est["estimated_daily_visitors"] >= min_daily_visitors,
+            }
+        )
 
     results.sort(key=lambda r: r["estimated_daily_visitors"], reverse=True)
     qualifying = [r for r in results if r["meets_threshold"]]

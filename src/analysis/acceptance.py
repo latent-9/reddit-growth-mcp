@@ -13,18 +13,18 @@ from __future__ import annotations
 
 import re
 from collections import Counter
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 import praw
-from prawcore import NotFound, Forbidden, TooManyRequests, ResponseException
+from prawcore import Forbidden, NotFound, ResponseException, TooManyRequests
 
+from . import arctic
 from .helpers import (
     clean_subreddit_name,
-    submission_to_features,
     features_from_arctic,
     safe_mean,
+    submission_to_features,
 )
-from . import arctic
 
 # Phrases in rule text that hint at account-based gates (karma / age).
 _KARMA_PATTERN = re.compile(r"(\d[\d,]*)\s*\+?\s*(comment|post|combined|total)?\s*karma", re.I)
@@ -45,11 +45,13 @@ def _load_rules(sub: praw.reddit.Subreddit) -> List[Dict[str, Any]]:
     rules = []
     try:
         for rule in sub.rules:
-            rules.append({
-                "name": getattr(rule, "short_name", ""),
-                "description": (getattr(rule, "description", "") or "").strip(),
-                "applies_to": getattr(rule, "kind", "all"),
-            })
+            rules.append(
+                {
+                    "name": getattr(rule, "short_name", ""),
+                    "description": (getattr(rule, "description", "") or "").strip(),
+                    "applies_to": getattr(rule, "kind", "all"),
+                }
+            )
     except (ResponseException, TooManyRequests):
         pass
     return rules
@@ -123,7 +125,7 @@ def _sample_via_live_diff(name: str, reddit: praw.Reddit, after: str, limit: int
     live_map = {}
     fullnames = [f"t3_{i}" for i in ids]
     for start in range(0, len(fullnames), 100):
-        for s in reddit.info(fullnames[start:start + 100]):
+        for s in reddit.info(fullnames[start : start + 100]):
             live_map[s.id] = s
 
     live, mod_removed, filtered = [], [], []
@@ -186,8 +188,7 @@ def analyze_acceptance(
     try:
         if use_archive and sub is not None:
             try:
-                live, mod_removed, filtered = _sample_via_live_diff(
-                    name, reddit, archive_window, sample_size)
+                live, mod_removed, filtered = _sample_via_live_diff(name, reddit, archive_window, sample_size)
                 method = "archive_live_diff"
             except arctic.ArcticUnavailable:
                 live, mod_removed = _sample_via_praw(sub, sample_size)
@@ -197,18 +198,18 @@ def analyze_acceptance(
                 live, mod_removed, filtered = _sample_via_archive(name, archive_window, sample_size)
                 method = "archive"
             except arctic.ArcticUnavailable:
-                return {"error": "Archive unavailable and no Reddit credentials",
-                        "subreddit": name,
-                        "hint": "Retry later, or add Reddit credentials for the live source."}
+                return {
+                    "error": "Archive unavailable and no Reddit credentials",
+                    "subreddit": name,
+                    "hint": "Retry later, or add Reddit credentials for the live source.",
+                }
         elif sub is not None:
             live, mod_removed = _sample_via_praw(sub, sample_size)
             method = "praw_listing"
         else:
-            return {"error": "use_archive=False requires Reddit credentials",
-                    "subreddit": name}
+            return {"error": "use_archive=False requires Reddit credentials", "subreddit": name}
     except (TooManyRequests, ResponseException) as e:
-        return {"error": f"Failed to sample posts: {e}", "rules": rules,
-                "post_requirements": requirements}
+        return {"error": f"Failed to sample posts: {e}", "rules": rules, "post_requirements": requirements}
 
     sampled = len(live) + len(mod_removed)
     removal_rate = round(len(mod_removed) / sampled, 3) if sampled else 0.0
@@ -234,8 +235,10 @@ def analyze_acceptance(
             "live": _share([r for r in live if r["media_type"] == "text"], "id") if live else 0.0,
             "removed": _share([r for r in mod_removed if r["media_type"] == "text"], "id") if mod_removed else 0.0,
         },
-        "avg_title_length": {"live": safe_mean([r["char_length"] for r in live]),
-                             "removed": safe_mean([r["char_length"] for r in mod_removed])},
+        "avg_title_length": {
+            "live": safe_mean([r["char_length"] for r in live]),
+            "removed": safe_mean([r["char_length"] for r in mod_removed]),
+        },
     }
     live_media = Counter(r["media_type"] for r in live)
 
@@ -276,14 +279,21 @@ def analyze_acceptance(
             "based on removal patterns only. Add creds for exact rule text."
         )
 
-    strictness = ("high" if removal_rate >= 0.3 or account_gates or requirements.get("flair_required")
-                  else "medium" if removal_rate >= 0.1 else "low")
+    strictness = (
+        "high"
+        if removal_rate >= 0.3 or account_gates or requirements.get("flair_required")
+        else "medium"
+        if removal_rate >= 0.1
+        else "low"
+    )
 
     if method == "archive_live_diff":
         removal_note = "Removal rate from live diff (Arctic archive vs current Reddit): accurate."
     elif method == "archive":
-        removal_note = ("Removal rate from the archive; AutoMod-filtered posts are "
-                        "excluded as uncertain. Add creds for an accurate live check.")
+        removal_note = (
+            "Removal rate from the archive; AutoMod-filtered posts are "
+            "excluded as uncertain. Add creds for an accurate live check."
+        )
     else:
         removal_note = "Removal rate is a LOWER BOUND — PRAW listing hides removed posts."
 

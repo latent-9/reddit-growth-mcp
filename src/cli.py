@@ -19,10 +19,10 @@ import sys
 
 from dotenv import load_dotenv
 
-from src.analysis.patterns import analyze_post_patterns
 from src.analysis.acceptance import analyze_acceptance
 from src.analysis.compare import compare_subreddits
 from src.analysis.draft import evaluate_draft
+from src.analysis.patterns import analyze_post_patterns
 from src.analysis.traffic import estimate_activity_archive
 
 load_dotenv()
@@ -32,6 +32,7 @@ def _get_reddit():
     """Return a Reddit client if credentials work, else None (archive mode)."""
     try:
         from src.config import get_reddit_client
+
         return get_reddit_client()
     except Exception:
         return None
@@ -53,21 +54,28 @@ def _fmt_hour(hour_utc: int, tz: float) -> str:
 
 def _print_patterns(d: dict, tz: float = 0.0) -> None:
     if "error" in d:
-        print("Error:", d["error"]); return
-    _hr(f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, "
-        f"n={d['sampled']}, confidence={d.get('confidence')})")
+        print("Error:", d["error"])
+        return
+    _hr(
+        f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, "
+        f"n={d['sampled']}, confidence={d.get('confidence')})"
+    )
     rng = d.get("sample_date_range")
     if rng:
         print(f"Coverage: {rng['oldest']} to {rng['newest']} ({d.get('sample_span_days')} days)")
     st = d["score_stats"]
-    print(f"{d.get('metric','score')}: median {st['median']} · trimmed-mean "
-          f"{st.get('trimmed_mean')} · mean {st['mean']} · max {st['max']}")
+    print(
+        f"{d.get('metric', 'score')}: median {st['median']} · trimmed-mean "
+        f"{st.get('trimmed_mean')} · mean {st['mean']} · max {st['max']}"
+    )
     print("(ranked by median = typical post; trimmed-mean drops outliers)")
     cb = d.get("clickbait_effect", {})
     if cb:
-        print(f"Clickbait here: {cb.get('verdict')} "
-              f"(baity mean {cb.get('clickbait_avg')} vs clean {cb.get('clean_avg')}, "
-              f"{cb.get('lift_pct')}%)")
+        print(
+            f"Clickbait here: {cb.get('verdict')} "
+            f"(baity mean {cb.get('clickbait_avg')} vs clean {cb.get('clean_avg')}, "
+            f"{cb.get('lift_pct')}%)"
+        )
 
     _hr("Best media types (median / mean)")
     for m in d["score_by_media_type"]:
@@ -79,7 +87,10 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
 
     _hr("Best posting hours (>=3 posts, by hit-rate)")
     for h in d["best_posting_hours_utc"][:5]:
-        print(f"  {_fmt_hour(h['hour_utc'], tz):<28} hit {h.get('hit_rate', 0):>5.0%}   mean {h['mean']:>6}   ({h['posts']} posts)")
+        print(
+            f"  {_fmt_hour(h['hour_utc'], tz):<28} hit {h.get('hit_rate', 0):>5.0%}   "
+            f"mean {h['mean']:>6}   ({h['posts']} posts)"
+        )
 
     _hr("Best days (by hit-rate)")
     for x in d["best_posting_days"][:3]:
@@ -109,11 +120,20 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
             print(f"  Flair : {rc['flair']['value']} ({rc['flair']['share']:.0%})")
         print(f"  Time  : {rc['time_block_utc']['value']} ({rc['time_block_utc']['share']:.0%})")
         t = rc["title"]
-        traits = [n for n, key in [("question", "question"), ("showcase", "showcase"),
-                                   ("numbers", "has_number"), ("clickbait", "clickbait")]
-                  if t[key]["overrepresented"]]
-        print(f"  Title : ~{t['median_char_length']} chars"
-              + (f"; over-represented: {', '.join(traits)}" if traits else ""))
+        traits = [
+            n
+            for n, key in [
+                ("question", "question"),
+                ("showcase", "showcase"),
+                ("numbers", "has_number"),
+                ("clickbait", "clickbait"),
+            ]
+            if t[key]["overrepresented"]
+        ]
+        print(
+            f"  Title : ~{t['median_char_length']} chars"
+            + (f"; over-represented: {', '.join(traits)}" if traits else "")
+        )
         if rc["keywords"]:
             print(f"  Words : {', '.join(rc['keywords'][:6])}")
 
@@ -125,10 +145,13 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
 
 def _print_acceptance(d: dict) -> None:
     if "error" in d:
-        print("Error:", d["error"]); return
+        print("Error:", d["error"])
+        return
     _hr(f"ACCEPTANCE · r/{d['subreddit']}  ({d['detection_method']}, reliability: {d.get('reliability')})")
-    print(f"Strictness: {d['strictness']} · confirmed removal rate {d['removal_rate_estimate']:.0%} "
-          f"({d['mod_removed_count']}/{d['sampled_posts']} confirmed)")
+    print(
+        f"Strictness: {d['strictness']} · confirmed removal rate {d['removal_rate_estimate']:.0%} "
+        f"({d['mod_removed_count']}/{d['sampled_posts']} confirmed)"
+    )
     if d.get("automod_filtered_count"):
         print(f"AutoMod-filtered (uncertain): {d['automod_filtered_count']} posts")
     print(f"Rules loaded: {d['rules_available']}")
@@ -150,14 +173,20 @@ def _print_acceptance(d: dict) -> None:
 
 def _print_compare(d: dict) -> None:
     if "error" in d:
-        print("Error:", d["error"]); return
+        print("Error:", d["error"])
+        return
     _hr(f"SUBREDDIT COMPARISON  (ranked by {d.get('ranked_by', 'viral')})")
-    print(f"{'subreddit':20} {'growth':>7} {'viral':>7} {'posts/day':>10} {'comments':>9} {'removal':>8} {'safety':>9}  conf")
+    print(
+        f"{'subreddit':20} {'growth':>7} {'viral':>7} {'posts/day':>10} "
+        f"{'comments':>9} {'removal':>8} {'safety':>9}  conf"
+    )
     for p in d["ranked"]:
         conf = "low*" if p.get("low_confidence") else "ok"
-        print(f"  r/{p['subreddit']:17} {p.get('growth_score', 0):>7} {p.get('viral_potential', 0):>7} "
-              f"{p.get('posts_per_day', 0):>10} {p.get('median_comments', 0):>9} "
-              f"{p['removal_rate']:>7.0%} {p.get('safety', '-'):>9}  {conf}")
+        print(
+            f"  r/{p['subreddit']:17} {p.get('growth_score', 0):>7} {p.get('viral_potential', 0):>7} "
+            f"{p.get('posts_per_day', 0):>10} {p.get('median_comments', 0):>9} "
+            f"{p['removal_rate']:>7.0%} {p.get('safety', '-'):>9}  {conf}"
+        )
     if any(p.get("low_confidence") for p in d["ranked"]):
         print("  * low = many AutoMod-filtered posts; add creds for accuracy")
     for f in d.get("failed", []):
@@ -169,12 +198,17 @@ def _print_compare(d: dict) -> None:
 
 def _print_draft(d: dict) -> None:
     if "error" in d:
-        print("Error:", d["error"]); return
+        print("Error:", d["error"])
+        return
     _hr(f"DRAFT EVALUATION · r/{d['subreddit']}")
-    print(f"Acceptance: {d['acceptance_verdict']} (strictness {d.get('subreddit_strictness')}, "
-          f"removal {d.get('removal_rate_estimate', 0):.0%})")
-    print(f"Performance: {d['performance_score']}/100 [{d['performance_band']}]  ·  "
-          f"projected score ~{d['projected_score']} (sub avg {d['baseline_avg_score']})")
+    print(
+        f"Acceptance: {d['acceptance_verdict']} (strictness {d.get('subreddit_strictness')}, "
+        f"removal {d.get('removal_rate_estimate', 0):.0%})"
+    )
+    print(
+        f"Performance: {d['performance_score']}/100 [{d['performance_band']}]  ·  "
+        f"projected score ~{d['projected_score']} (sub avg {d['baseline_avg_score']})"
+    )
     if d.get("clickbait_risk", 0) >= 0.4:
         print(f"Clickbait risk: {d['clickbait_risk']} (sub verdict: {d.get('sub_clickbait_verdict')})")
     va = d.get("viral_alignment")
@@ -183,8 +217,10 @@ def _print_draft(d: dict) -> None:
         if va.get("missing"):
             print(f"  Missing for viral: {', '.join(va['missing'])}")
         rc = va["recipe"]
-        print(f"  Viral recipe: {rc['media']} / flair {rc['flair']} / {rc['time_block_utc']}"
-              + (f" / words {rc['keywords']}" if rc.get("keywords") else ""))
+        print(
+            f"  Viral recipe: {rc['media']} / flair {rc['flair']} / {rc['time_block_utc']}"
+            + (f" / words {rc['keywords']}" if rc.get("keywords") else "")
+        )
     if d.get("blocking_issues"):
         _hr("Blocking issues (likely removal)")
         for i in d["blocking_issues"]:
@@ -211,25 +247,39 @@ def _print_draft(d: dict) -> None:
             print("  Days: " + ", ".join(x["day"] for x in days[:2]))
 
 
+def _print_traffic(d: dict) -> None:
+    if "error" in d:
+        print("Error:", d["error"])
+        return
+    s = d["signals"]
+    print(f"\nr/{d['subreddit']} — activity: {d['activity_tier']}")
+    print(
+        f"  {s['posts_per_day_est']} posts/day · median {s['median_score']} upvotes · "
+        f"{s['median_comments_per_post']} comments "
+        f"(sample {s['sample']} over {s['span_days']}d)"
+    )
+
+
 def _run_plan(args, reddit) -> None:
     """Growth planner: rank subs, pick the safest strong one, print its recipe."""
     comp = compare_subreddits(args.subreddits, args.window, 90, "growth")
     if "error" in comp or not comp.get("ranked"):
-        print("Could not rank subreddits:", comp.get("error", "no data")); return
+        print("Could not rank subreddits:", comp.get("error", "no data"))
+        return
 
     # Prefer a safe/moderate, high-confidence sub with real growth potential.
-    eligible = [p for p in comp["ranked"]
-                if p.get("safety") != "strict" and not p.get("low_confidence")]
+    eligible = [p for p in comp["ranked"] if p.get("safety") != "strict" and not p.get("low_confidence")]
     pick = (eligible or comp["ranked"])[0]
     name = pick["subreddit"]
 
     _hr("GROWTH PLAN")
     print(f"Target: r/{name}")
-    print(f"  growth {pick.get('growth_score')} · viral {pick.get('viral_potential')} · "
-          f"{pick.get('posts_per_day')} posts/day · {pick.get('median_comments')} comments · "
-          f"{pick['removal_rate']:.0%} removed ({pick.get('safety')})")
-    skipped = [p["subreddit"] for p in comp["ranked"]
-               if p.get("safety") == "strict" or p.get("low_confidence")]
+    print(
+        f"  growth {pick.get('growth_score')} · viral {pick.get('viral_potential')} · "
+        f"{pick.get('posts_per_day')} posts/day · {pick.get('median_comments')} comments · "
+        f"{pick['removal_rate']:.0%} removed ({pick.get('safety')})"
+    )
+    skipped = [p["subreddit"] for p in comp["ranked"] if p.get("safety") == "strict" or p.get("low_confidence")]
     if skipped:
         print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in skipped)}")
 
@@ -238,12 +288,15 @@ def _run_plan(args, reddit) -> None:
     if also:
         _hr("Also worth posting to (safe, tailor per sub)")
         for p in also[:4]:
-            print(f"  r/{p['subreddit']:18} growth {p.get('growth_score', 0):>6} · "
-                  f"{p['removal_rate']:.0%} removed ({p.get('safety')})")
+            print(
+                f"  r/{p['subreddit']:18} growth {p.get('growth_score', 0):>6} · "
+                f"{p['removal_rate']:.0%} removed ({p.get('safety')})"
+            )
 
     pat = analyze_post_patterns(name, reddit, "top", "month", 200, "auto")
     if "error" in pat:
-        print("  (pattern read unavailable right now)"); return
+        print("  (pattern read unavailable right now)")
+        return
     vp = pat.get("viral_profile", {})
     if vp.get("available"):
         rc = vp["recipe"]
@@ -272,11 +325,15 @@ def main(argv=None) -> int:
     sp.add_argument("subreddit")
     sp.add_argument("--time", default="month", choices=["day", "week", "month", "year", "all"])
     sp.add_argument("--limit", type=int, default=200)
-    sp.add_argument("--metric", default="score",
-                    choices=["score", "comments", "discussion", "quality"],
-                    help="score=upvotes, discussion=comments/upvote (anti-clickbait), quality=clickbait-damped")
-    sp.add_argument("--tz", type=float, default=0.0,
-                    help="Local UTC offset in hours to also show posting times in (e.g. 7 for WIB)")
+    sp.add_argument(
+        "--metric",
+        default="score",
+        choices=["score", "comments", "discussion", "quality"],
+        help="score=upvotes, discussion=comments/upvote (anti-clickbait), quality=clickbait-damped",
+    )
+    sp.add_argument(
+        "--tz", type=float, default=0.0, help="Local UTC offset in hours to also show posting times in (e.g. 7 for WIB)"
+    )
 
     sa = sub.add_parser("acceptance", help="Removal rate + what gets nuked")
     sa.add_argument("subreddit")
@@ -290,8 +347,9 @@ def main(argv=None) -> int:
     sc.add_argument("subreddits", nargs="+")
     sc.add_argument("--window", default="60d")
     sc.add_argument("--sample", type=int, default=200)
-    sc.add_argument("--rank-by", dest="rank_by", default="growth",
-                    choices=["growth", "viral", "opportunity", "insight"])
+    sc.add_argument(
+        "--rank-by", dest="rank_by", default="growth", choices=["growth", "viral", "opportunity", "insight"]
+    )
 
     sr = sub.add_parser("report", help="Full report: acceptance + patterns for a subreddit")
     sr.add_argument("subreddit")
@@ -329,12 +387,7 @@ def main(argv=None) -> int:
         printer = _print_draft
     elif args.cmd == "traffic":
         result = estimate_activity_archive(args.subreddit, args.window)
-        printer = lambda d: (print("Error:", d["error"]) if "error" in d else
-                             print(f"\nr/{d['subreddit']} — activity: {d['activity_tier']}\n"
-                                   f"  {d['signals']['posts_per_day_est']} posts/day · "
-                                   f"median {d['signals']['median_score']} upvotes · "
-                                   f"{d['signals']['median_comments_per_post']} comments "
-                                   f"(sample {d['signals']['sample']} over {d['signals']['span_days']}d)"))
+        printer = _print_traffic
     elif args.cmd == "plan":
         _run_plan(args, reddit)
         return 0

@@ -35,7 +35,19 @@ dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
     "pytest-mock>=3.14.0",
+    "ruff>=0.6.0",
 ]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+# Entry points set up sys.path / load environment before importing modules.
+"src/server.py" = ["E402"]
+"src/cli.py" = ["E402"]
 
 [project.scripts]
 reddit-analyzer = "src.server:main"

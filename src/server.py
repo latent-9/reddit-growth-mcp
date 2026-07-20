@@ -13,26 +13,30 @@ import sys
 from pathlib import Path
 from typing import Annotated, Any, Dict, List, Optional
 
-from fastmcp import Context, FastMCP
 from dotenv import load_dotenv
+from fastmcp import Context, FastMCP
 
 load_dotenv()
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from src.analysis.acceptance import analyze_acceptance as _analyze_acceptance
+from src.analysis.compare import compare_subreddits as _compare_subreddits
+from src.analysis.draft import evaluate_draft as _evaluate_draft
+from src.analysis.patterns import analyze_post_patterns as _analyze_post_patterns
+from src.analysis.traffic import (
+    estimate_activity_archive,
+    estimate_subreddit_traffic,
+    find_target_subreddits,
+)
 from src.config import get_reddit_client
 from src.resources import register_resources
-from src.tools.search import search_in_subreddit
-from src.tools.posts import fetch_subreddit_posts, fetch_multiple_subreddits
 from src.tools.comments import fetch_submission_with_comments
-from src.analysis.traffic import (
-    estimate_subreddit_traffic, find_target_subreddits, estimate_activity_archive,
-)
-from src.analysis.acceptance import analyze_acceptance as _analyze_acceptance
-from src.analysis.patterns import analyze_post_patterns as _analyze_post_patterns
-from src.analysis.draft import evaluate_draft as _evaluate_draft
-from src.analysis.compare import compare_subreddits as _compare_subreddits
+from src.tools.posts import fetch_multiple_subreddits, fetch_subreddit_posts
+from src.tools.search import search_in_subreddit
 
-mcp = FastMCP("Reddit Analyzer", instructions="""
+mcp = FastMCP(
+    "Reddit Analyzer",
+    instructions="""
 Reddit Analyzer — find where to post and how to get accepted.
 
 Typical workflow:
@@ -42,7 +46,8 @@ Typical workflow:
 4. evaluate_draft(subreddit, title, ...) — score your draft before posting.
 
 All traffic figures are estimates (Reddit hides true visitor counts publicly).
-""")
+""",
+)
 
 # Reddit client is initialized at startup and shared across tools.
 reddit = None
@@ -50,8 +55,8 @@ reddit = None
 _NO_CREDS = {
     "error": "Reddit credentials not configured",
     "hint": "Set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env. "
-            "Tip: analyze_post_patterns and analyze_acceptance already work "
-            "without credentials (via the Arctic archive).",
+    "Tip: analyze_post_patterns and analyze_acceptance already work "
+    "without credentials (via the Arctic archive).",
 }
 
 
@@ -69,6 +74,7 @@ except Exception as e:  # allow the server to boot without creds for inspection
 
 # ── Analysis tools ────────────────────────────────────────────────────────
 
+
 @mcp.tool(
     description="Discover and rank subreddits for given topics by estimated traffic",
     annotations={"readOnlyHint": True},
@@ -84,8 +90,13 @@ def find_target_subreddits_tool(
     if reddit is None:
         return _NO_CREDS
     return find_target_subreddits(
-        topics, reddit, limit_per_topic, min_subscribers,
-        min_daily_visitors, include_nsfw, ctx,
+        topics,
+        reddit,
+        limit_per_topic,
+        min_subscribers,
+        min_daily_visitors,
+        include_nsfw,
+        ctx,
     )
 
 
@@ -170,6 +181,7 @@ def compare_subreddits(
 
 # ── Raw data access tools ─────────────────────────────────────────────────
 
+
 @mcp.tool(description="Fetch posts from a single subreddit", annotations={"readOnlyHint": True})
 def fetch_posts(
     subreddit_name: Annotated[str, "Subreddit name (without r/)"],
@@ -193,8 +205,7 @@ async def fetch_multiple(
 ) -> Dict[str, Any]:
     if reddit is None:
         return _NO_CREDS
-    return await fetch_multiple_subreddits(
-        subreddit_names, reddit, listing_type, time_filter, limit_per_subreddit, ctx)
+    return await fetch_multiple_subreddits(subreddit_names, reddit, listing_type, time_filter, limit_per_subreddit, ctx)
 
 
 @mcp.tool(description="Search posts within a subreddit", annotations={"readOnlyHint": True})
@@ -221,8 +232,7 @@ async def fetch_comments(
 ) -> Dict[str, Any]:
     if reddit is None:
         return _NO_CREDS
-    return await fetch_submission_with_comments(
-        reddit, submission_id, url, comment_limit, comment_sort, ctx)
+    return await fetch_submission_with_comments(reddit, submission_id, url, comment_limit, comment_sort, ctx)
 
 
 def main():

@@ -11,8 +11,8 @@ from typing import Any, Dict, List, Optional
 import praw
 
 from .acceptance import analyze_acceptance
+from .helpers import clickbait_score, extract_title_features
 from .patterns import analyze_post_patterns
-from .helpers import extract_title_features, clickbait_score
 
 
 def _clamp(x: float, lo: float, hi: float) -> float:
@@ -58,12 +58,10 @@ def _check_compliance(
 
 
 def _band_of(char_length: int) -> str:
-    return ("short (<40)" if char_length < 40
-            else "medium (40-80)" if char_length <= 80 else "long (>80)")
+    return "short (<40)" if char_length < 40 else "medium (40-80)" if char_length <= 80 else "long (>80)"
 
 
-def _predict_performance(title: str, post_type: str, flair: Optional[str],
-                         patterns: Dict[str, Any]) -> Dict[str, Any]:
+def _predict_performance(title: str, post_type: str, flair: Optional[str], patterns: Dict[str, Any]) -> Dict[str, Any]:
     """Predict a draft's performance from the sub's own score distribution.
 
     Starts at the sub's average score, applies data-derived multipliers for
@@ -86,10 +84,13 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
     if media:
         best_media = max(media, key=media.get)
         if post_type in media:
-            r = ratio_to(media[post_type]); mult *= r
-            drivers.append({"factor": f"media={post_type}", "impact": f"×{round(r,2)}"})
+            r = ratio_to(media[post_type])
+            mult *= r
+            drivers.append({"factor": f"media={post_type}", "impact": f"×{round(r, 2)}"})
         if best_media != post_type:
-            suggestions.append(f"Top media type here is '{best_media}' (avg {media[best_media]}); yours is '{post_type}'.")
+            suggestions.append(
+                f"Top media type here is '{best_media}' (avg {media[best_media]}); yours is '{post_type}'."
+            )
 
     # Title length band.
     bands = {b["value"]: b["mean"] for b in patterns.get("title_length_bands", [])}
@@ -97,20 +98,26 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
         cur = _band_of(tf["char_length"])
         best_band = max(bands, key=bands.get)
         if cur in bands:
-            r = ratio_to(bands[cur]); mult *= r
-            drivers.append({"factor": f"title_len={cur}", "impact": f"×{round(r,2)}"})
+            r = ratio_to(bands[cur])
+            mult *= r
+            drivers.append({"factor": f"title_len={cur}", "impact": f"×{round(r, 2)}"})
         if best_band != cur:
             suggestions.append(f"Best title length is '{best_band}'; yours is '{cur}'.")
 
     # Title signals (question/list/showcase/number/emoji).
     lift = patterns.get("title_signal_lift", {})
-    for feat, key in [("is_question", "question_titles"), ("is_list", "list_titles"),
-                      ("is_showcase", "showcase_titles"), ("has_number", "has_number"),
-                      ("has_emoji", "has_emoji")]:
+    for feat, key in [
+        ("is_question", "question_titles"),
+        ("is_list", "list_titles"),
+        ("is_showcase", "showcase_titles"),
+        ("has_number", "has_number"),
+        ("has_emoji", "has_emoji"),
+    ]:
         if tf.get(feat):
             pct = lift.get(key, {}).get("lift_pct", 0)
-            r = _clamp(1 + pct / 100.0, 0.5, 2.0); mult *= r
-            drivers.append({"factor": key, "impact": f"×{round(r,2)} ({pct:+.0f}%)"})
+            r = _clamp(1 + pct / 100.0, 0.5, 2.0)
+            mult *= r
+            drivers.append({"factor": key, "impact": f"×{round(r, 2)} ({pct:+.0f}%)"})
     # Suggest a high-lift signal the draft is missing.
     for key, feat in [("has_number", "has_number"), ("showcase_titles", "is_showcase")]:
         if not tf.get(feat) and lift.get(key, {}).get("lift_pct", 0) > 30:
@@ -120,8 +127,9 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
     flairs = {f["value"]: f["mean"] for f in patterns.get("score_by_flair", []) if f["value"]}
     if flairs:
         if flair in flairs:
-            r = ratio_to(flairs[flair]); mult *= r
-            drivers.append({"factor": f"flair={flair}", "impact": f"×{round(r,2)}"})
+            r = ratio_to(flairs[flair])
+            mult *= r
+            drivers.append({"factor": f"flair={flair}", "impact": f"×{round(r, 2)}"})
         else:
             top3 = sorted(flairs, key=flairs.get, reverse=True)[:3]
             suggestions.append(f"High-performing flairs: {top3}.")
@@ -130,8 +138,9 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
     kws = {k["word"] for k in patterns.get("winning_keywords", [])}
     matched = [w for w in kws if w in title.lower()]
     if matched:
-        r = _clamp(1 + 0.1 * len(matched), 1.0, 1.4); mult *= r
-        drivers.append({"factor": f"keywords={matched}", "impact": f"×{round(r,2)}"})
+        r = _clamp(1 + 0.1 * len(matched), 1.0, 1.4)
+        mult *= r
+        drivers.append({"factor": f"keywords={matched}", "impact": f"×{round(r, 2)}"})
 
     # Clickbait check: penalize only if this sub actually dislikes clickbait.
     cb = clickbait_score(title)
@@ -140,8 +149,10 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
         if effect.get("verdict") == "clickbait_penalized":
             mult *= 0.85
             drivers.append({"factor": "clickbait_title", "impact": "×0.85 (this sub penalizes it)"})
-            suggestions.append(f"Your title reads clickbaity (score {cb}); r/{patterns.get('subreddit','this sub')} "
-                               f"rewards genuine framing ({effect.get('lift_pct')}% for clickbait). Tone it down.")
+            suggestions.append(
+                f"Your title reads clickbaity (score {cb}); r/{patterns.get('subreddit', 'this sub')} "
+                f"rewards genuine framing ({effect.get('lift_pct')}% for clickbait). Tone it down."
+            )
         elif effect.get("verdict") == "clickbait_rewarded":
             drivers.append({"factor": "clickbait_title", "impact": "neutral (sub tolerates it)"})
         else:
@@ -163,8 +174,9 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
     else:
         performance = 50
 
-    band = ("viral" if performance >= 90 else "strong" if performance >= 70
-            else "average" if performance >= 40 else "weak")
+    band = (
+        "viral" if performance >= 90 else "strong" if performance >= 70 else "average" if performance >= 40 else "weak"
+    )
 
     return {
         "performance_score": performance,
@@ -189,8 +201,7 @@ def _viral_alignment(title: str, post_type: str, flair, patterns: Dict[str, Any]
     if rc["flair"]["value"]:
         checks["flair"] = flair == rc["flair"]["value"]
     checks["title_length"] = abs(tf["char_length"] - rc["title"]["median_char_length"]) <= 20
-    for rk, feat in [("has_number", "has_number"), ("showcase", "is_showcase"),
-                     ("question", "is_question")]:
+    for rk, feat in [("has_number", "has_number"), ("showcase", "is_showcase"), ("question", "is_question")]:
         if rc["title"].get(rk, {}).get("overrepresented"):
             checks[rk] = bool(tf.get(feat))
     kws = rc.get("keywords", [])
@@ -204,8 +215,12 @@ def _viral_alignment(title: str, post_type: str, flair, patterns: Dict[str, Any]
         "matched": matched,
         "total": total,
         "missing": [k for k, v in checks.items() if not v],
-        "recipe": {"media": rc["media_type"]["value"], "flair": rc["flair"]["value"],
-                   "time_block_utc": rc["time_block_utc"]["value"], "keywords": kws[:6]},
+        "recipe": {
+            "media": rc["media_type"]["value"],
+            "flair": rc["flair"]["value"],
+            "time_block_utc": rc["time_block_utc"]["value"],
+            "keywords": kws[:6],
+        },
     }
 
 

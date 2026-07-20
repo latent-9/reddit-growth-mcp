@@ -9,12 +9,14 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Union
 
-from .helpers import clean_subreddit_name, features_from_arctic, safe_mean, percentile
-from .constants import (
-    VIRAL_PERCENTILE, SAFETY_SAFE_MAX, SAFETY_MODERATE_MAX,
-    LOW_CONFIDENCE_FILTERED_RATIO,
-)
 from . import arctic
+from .constants import (
+    LOW_CONFIDENCE_FILTERED_RATIO,
+    SAFETY_MODERATE_MAX,
+    SAFETY_SAFE_MAX,
+    VIRAL_PERCENTILE,
+)
+from .helpers import clean_subreddit_name, features_from_arctic, percentile, safe_mean
 
 
 def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
@@ -57,8 +59,9 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     top_media = max(media, key=media.get) if media else None
 
     # Safety = how likely a rule-abiding post survives (mean-mod risk).
-    safety = ("safe" if removal_rate < SAFETY_SAFE_MAX
-              else "moderate" if removal_rate < SAFETY_MODERATE_MAX else "strict")
+    safety = (
+        "safe" if removal_rate < SAFETY_SAFE_MAX else "moderate" if removal_rate < SAFETY_MODERATE_MAX else "strict"
+    )
 
     return {
         "subreddit": name,
@@ -98,8 +101,12 @@ def compare_subreddits(
     if not names:
         return {"error": "Provide at least one subreddit name"}
 
-    sort_key = {"viral": "viral_potential", "opportunity": "opportunity_score",
-                "growth": "growth_score", "insight": "median_comments"}.get(rank_by, "growth_score")
+    sort_key = {
+        "viral": "viral_potential",
+        "opportunity": "opportunity_score",
+        "growth": "growth_score",
+        "insight": "median_comments",
+    }.get(rank_by, "growth_score")
     profiles = [_profile_subreddit(n, window, sample) for n in names]
     ranked = [p for p in profiles if "error" not in p]
     ranked.sort(key=lambda p: p[sort_key], reverse=True)
