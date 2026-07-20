@@ -135,8 +135,12 @@ def test_clickbait_score():
     assert clickbait_score("A calm honest title about Fedora") == 0.0
     assert clickbait_score("You won't BELIEVE this INSANE trick!!!") >= 0.5
     assert clickbait_score("My new ASCII tool 🔥🔥🔥") > 0
-    # Clean dev title stays low.
+    # Clean dev titles stay low (no false positives on normal wording).
     assert clickbait_score("Open-source MCP server for ASCII art") < 0.3
+    assert clickbait_score("A CLI tool to convert images to ASCII in seconds") < 0.3
+    assert clickbait_score("How I built a terminal gallery with Rust") < 0.3
+    # Baity phrasing is caught.
+    assert clickbait_score("The SECRET trick that changed my life") >= 0.5
 
 
 def test_engagement_ratio():

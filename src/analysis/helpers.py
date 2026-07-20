@@ -187,11 +187,14 @@ _CLICKBAIT_PHRASES = re.compile(
     r"\b(you won'?t believe|will blow your mind|shocking|insane|jaw[- ]dropping|"
     r"this one (trick|weird)|nobody (talks about|tells you)|mind[- ]?blown|"
     r"gone wrong|must[- ]see|game[- ]changer|the truth about|what happens next|"
-    r"i can'?t believe|blew my mind|life[- ]changing|never seen before)\b",
+    r"i can'?t believe|blew my mind|life[- ]changing|never seen before|"
+    r"the secret|one weird trick|doctors hate|you need to see|"
+    r"changed my life|this simple trick|will never be the same)\b",
     re.I,
 )
 _HYPE_WORDS = re.compile(r"\b(amazing|incredible|unbelievable|epic|ultimate|"
-                         r"revolutionary|insane|crazy|perfect|best ever|100%)\b", re.I)
+                         r"revolutionary|insane|insanely|crazy|ridiculously|"
+                         r"mind[- ]blowing|perfect|best ever|100%)\b", re.I)
 _EMOJI = re.compile("[\U0001F300-\U0001FAFF\U00002600-\U000027BF]")
 
 
