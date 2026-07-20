@@ -72,7 +72,7 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
     yield a 0-100 performance score. Every factor is reported as a driver.
     """
     tf = extract_title_features(title)
-    base = patterns.get("score_stats", {}).get("avg", 0) or 0
+    base = patterns.get("score_stats", {}).get("mean", 0) or 0
     overall = base if base > 0 else 1.0
     drivers: List[Dict[str, Any]] = []
     suggestions: List[str] = []
@@ -82,7 +82,7 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
         return _clamp((avg or 0) / overall, 0.2, 4.0) if overall else 1.0
 
     # Media type.
-    media = {m["value"]: m["avg_score"] for m in patterns.get("score_by_media_type", [])}
+    media = {m["value"]: m["mean"] for m in patterns.get("score_by_media_type", [])}
     if media:
         best_media = max(media, key=media.get)
         if post_type in media:
@@ -92,7 +92,7 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
             suggestions.append(f"Top media type here is '{best_media}' (avg {media[best_media]}); yours is '{post_type}'.")
 
     # Title length band.
-    bands = {b["band"]: b["avg_score"] for b in patterns.get("title_length_bands", [])}
+    bands = {b["value"]: b["mean"] for b in patterns.get("title_length_bands", [])}
     if bands:
         cur = _band_of(tf["char_length"])
         best_band = max(bands, key=bands.get)
@@ -117,7 +117,7 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str],
             suggestions.append(f"Titles with '{key}' score {lift[key]['lift_pct']:+.0f}% here — consider adding.")
 
     # Flair.
-    flairs = {f["value"]: f["avg_score"] for f in patterns.get("score_by_flair", []) if f["value"]}
+    flairs = {f["value"]: f["mean"] for f in patterns.get("score_by_flair", []) if f["value"]}
     if flairs:
         if flair in flairs:
             r = ratio_to(flairs[flair]); mult *= r

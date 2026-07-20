@@ -5,16 +5,16 @@ from src.analysis.draft import _predict_performance, _check_compliance
 
 # A synthetic patterns report where image posts and 'showcase' titles win big.
 PATTERNS = {
-    "score_stats": {"avg": 100, "median": 40, "max": 2000},
+    "score_stats": {"mean": 100, "median": 40, "max": 2000},
     "score_percentiles": {25: 20, 50: 40, 75: 120, 90: 400, 95: 800},
     "score_by_media_type": [
-        {"value": "image", "avg_score": 300, "count": 30},
-        {"value": "text", "avg_score": 40, "count": 50},
+        {"value": "image", "median": 200, "mean": 300, "count": 30},
+        {"value": "text", "median": 20, "mean": 40, "count": 50},
     ],
     "title_length_bands": [
-        {"band": "short (<40)", "avg_score": 60},
-        {"band": "medium (40-80)", "avg_score": 180},
-        {"band": "long (>80)", "avg_score": 50},
+        {"value": "short (<40)", "median": 40, "mean": 60, "count": 20},
+        {"value": "medium (40-80)", "median": 120, "mean": 180, "count": 40},
+        {"value": "long (>80)", "median": 30, "mean": 50, "count": 20},
     ],
     "title_signal_lift": {
         "showcase_titles": {"lift_pct": 80, "sample_with": 12},
@@ -23,8 +23,10 @@ PATTERNS = {
         "list_titles": {"lift_pct": 0, "sample_with": 0},
         "has_emoji": {"lift_pct": 0, "sample_with": 0},
     },
-    "score_by_flair": [{"value": "Showcase", "avg_score": 400}, {"value": "Help", "avg_score": 10}],
+    "score_by_flair": [{"value": "Showcase", "median": 300, "mean": 400, "count": 12},
+                       {"value": "Help", "median": 5, "mean": 10, "count": 20}],
     "winning_keywords": [{"word": "ascii"}, {"word": "generator"}],
+    "clickbait_effect": {"verdict": "clickbait_neutral", "lift_pct": 0},
 }
 
 
@@ -36,7 +38,7 @@ def test_strong_draft_scores_high():
     )
     assert res["performance_score"] >= 70
     assert res["performance_band"] in {"strong", "viral"}
-    assert res["projected_score"] > PATTERNS["score_stats"]["avg"]
+    assert res["projected_score"] > PATTERNS["score_stats"]["mean"]
 
 
 def test_weak_draft_scores_low_and_suggests():

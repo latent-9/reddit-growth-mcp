@@ -33,25 +33,44 @@ def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str
             if not p.get("stickied") and p.get("removed_by_category") is None]
 
 
-def _avg_by(rows: List[Dict[str, Any]], key: str, perf: str) -> List[Dict[str, Any]]:
-    """Average performance grouped by a categorical feature, ranked high to low."""
+def _median(vals: List[float]) -> float:
+    s = sorted(vals)
+    n = len(s)
+    if n == 0:
+        return 0.0
+    mid = n // 2
+    return round((s[mid] if n % 2 else (s[mid - 1] + s[mid]) / 2), 2)
+
+
+def _group_stats(rows: List[Dict[str, Any]], key: str, perf: str,
+                 min_n: int = 3) -> List[Dict[str, Any]]:
+    """Group by a categorical feature; rank by median (outlier-robust), mean as
+    tiebreak. Only buckets with >= min_n samples are eligible, so a single lucky
+    post can't crown a category. Each row carries its sample count.
+    """
     buckets: Dict[Any, List[float]] = defaultdict(list)
     for r in rows:
         buckets[r.get(key)].append(r[perf])
-    return sorted(
-        ({"value": k, "avg_score": safe_mean(v), "count": len(v)} for k, v in buckets.items()),
-        key=lambda d: d["avg_score"], reverse=True,
-    )
+    out = [{"value": k, "median": _median(v), "mean": safe_mean(v), "count": len(v)}
+           for k, v in buckets.items() if len(v) >= min_n]
+    out.sort(key=lambda d: (d["median"], d["mean"]), reverse=True)
+    return out
 
 
-def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str) -> Dict[str, Any]:
-    """Compare average performance when a boolean feature is on vs off."""
+def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str,
+               min_n: int = 5) -> Dict[str, Any]:
+    """Median performance with vs without a boolean feature, plus a reliability
+    flag (both groups need >= min_n samples for the lift to be trustworthy)."""
     on = [r[perf] for r in rows if r.get(key)]
     off = [r[perf] for r in rows if not r.get(key)]
+    on_med, off_med = _median(on), _median(off)
     on_avg, off_avg = safe_mean(on), safe_mean(off)
+    # Lift on means (median is often 0 in low-engagement subs).
     lift = round((on_avg / off_avg - 1) * 100, 1) if off_avg else 0.0
     return {"with_avg_score": on_avg, "without_avg_score": off_avg,
-            "lift_pct": lift, "sample_with": len(on)}
+            "with_median": on_med, "without_median": off_med,
+            "lift_pct": lift, "sample_with": len(on),
+            "reliable": len(on) >= min_n and len(off) >= min_n}
 
 
 def _clickbait_effect(rows: List[Dict[str, Any]], perf: str) -> Dict[str, Any]:
@@ -118,52 +137,50 @@ def analyze_post_patterns(
     if not rows:
         return {"error": "No posts sampled", "subreddit": name}
 
-    # Precompute the chosen performance metric per row.
+    # Precompute the chosen metric and derived buckets per row.
     for r in rows:
         r["_perf"] = metric_value(r, metric)
+        r["length_band"] = ("short (<40)" if r["char_length"] < 40
+                            else "medium (40-80)" if r["char_length"] <= 80 else "long (>80)")
+        h = r["hour_utc"]
+        r["time_block"] = ("00-06 UTC" if h < 6 else "06-12 UTC" if h < 12
+                           else "12-18 UTC" if h < 18 else "18-24 UTC")
     rows.sort(key=lambda r: r["_perf"], reverse=True)
 
     perf = "_perf"
     vals = [r[perf] for r in rows]
-    hour_scores: Dict[int, List[float]] = defaultdict(list)
-    weekday_scores: Dict[str, List[float]] = defaultdict(list)
-    length_bands: Dict[str, List[float]] = defaultdict(list)
-    for r in rows:
-        hour_scores[r["hour_utc"]].append(r[perf])
-        weekday_scores[r["weekday_name"]].append(r[perf])
-        band = ("short (<40)" if r["char_length"] < 40
-                else "medium (40-80)" if r["char_length"] <= 80 else "long (>80)")
-        length_bands[band].append(r[perf])
+    n = len(rows)
+    confidence = "high" if n >= 80 else "medium" if n >= 30 else "low"
 
-    best_hours = sorted(
-        ({"hour_utc": h, "avg_score": safe_mean(s), "posts": len(s)} for h, s in hour_scores.items()),
-        key=lambda d: d["avg_score"], reverse=True)[:5]
-    best_days = sorted(
-        ({"day": d, "avg_score": safe_mean(s), "posts": len(s)} for d, s in weekday_scores.items()),
-        key=lambda x: x["avg_score"], reverse=True)
+    # Hours need a looser min (naturally sparse); blocks/days/categories tighter.
+    best_hours = [{"hour_utc": b["value"], "median": b["median"], "mean": b["mean"],
+                   "posts": b["count"]} for b in _group_stats(rows, "hour_utc", perf, min_n=3)][:5]
+    time_blocks = [{"block": b["value"], "median": b["median"], "mean": b["mean"],
+                    "posts": b["count"]} for b in _group_stats(rows, "time_block", perf, min_n=5)]
+    best_days = [{"day": b["value"], "median": b["median"], "mean": b["mean"],
+                  "posts": b["count"]} for b in _group_stats(rows, "weekday_name", perf, min_n=3)]
 
-    # Genuine-engagement snapshot (independent of the chosen metric).
     disc_ratios = [engagement_ratio(r["score"], r["num_comments"]) for r in rows]
 
     return {
         "subreddit": name,
-        "sampled": len(rows),
+        "sampled": n,
+        "confidence": confidence,
         "source": source_label,
         "metric": metric,
-        "score_stats": {"avg": safe_mean(vals), "max": max(vals),
-                        "median": sorted(vals)[len(vals) // 2]},
+        "score_stats": {"mean": safe_mean(vals), "median": _median(vals), "max": max(vals)},
         "score_percentiles": {q: percentile(sorted(vals), q) for q in (25, 50, 75, 90, 95)},
         "engagement": {
-            "median_comments_per_upvote": sorted(disc_ratios)[len(disc_ratios) // 2],
-            "avg_comments": safe_mean([r["num_comments"] for r in rows]),
+            "median_comments_per_upvote": _median(disc_ratios),
+            "median_comments": _median([r["num_comments"] for r in rows]),
         },
         "clickbait_effect": _clickbait_effect(rows, perf),
+        "best_time_blocks": time_blocks,
         "best_posting_hours_utc": best_hours,
         "best_posting_days": best_days,
-        "score_by_media_type": _avg_by(rows, "media_type", perf),
-        "score_by_flair": _avg_by(rows, "flair", perf)[:8],
-        "title_length_bands": [{"band": b, "avg_score": safe_mean(s), "posts": len(s)}
-                               for b, s in length_bands.items()],
+        "score_by_media_type": _group_stats(rows, "media_type", perf, min_n=3),
+        "score_by_flair": _group_stats(rows, "flair", perf, min_n=3)[:8],
+        "title_length_bands": _group_stats(rows, "length_band", perf, min_n=3),
         "title_signal_lift": {
             "question_titles": _bool_lift(rows, "is_question", perf),
             "list_titles": _bool_lift(rows, "is_list", perf),

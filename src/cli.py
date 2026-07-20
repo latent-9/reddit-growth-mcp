@@ -44,31 +44,37 @@ def _hr(title: str) -> None:
 def _print_patterns(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
-    _hr(f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, n={d['sampled']})")
+    _hr(f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, "
+        f"n={d['sampled']}, confidence={d.get('confidence')})")
     st = d["score_stats"]
-    print(f"{d.get('metric','score')}: avg {st['avg']} · median {st['median']} · max {st['max']}")
+    print(f"{d.get('metric','score')}: median {st['median']} · mean {st['mean']} · max {st['max']}")
+    print("(ranked by median = typical post; mean shown for reference)")
     cb = d.get("clickbait_effect", {})
     if cb:
         print(f"Clickbait here: {cb.get('verdict')} "
-              f"(baity avg {cb.get('clickbait_avg')} vs clean {cb.get('clean_avg')}, "
+              f"(baity mean {cb.get('clickbait_avg')} vs clean {cb.get('clean_avg')}, "
               f"{cb.get('lift_pct')}%)")
 
-    _hr("Best media types (avg score)")
+    _hr("Best media types (median / mean)")
     for m in d["score_by_media_type"]:
-        print(f"  {str(m['value']):16} {m['avg_score']:>8}   ({m['count']} posts)")
+        print(f"  {str(m['value']):16} med {m['median']:>7} / mean {m['mean']:>7}   ({m['count']} posts)")
 
-    _hr("Best posting hours (UTC)")
+    _hr("Best time blocks (UTC)")
+    for b in d.get("best_time_blocks", []):
+        print(f"  {b['block']:12} med {b['median']:>7} / mean {b['mean']:>7}   ({b['posts']} posts)")
+
+    _hr("Best posting hours (UTC, >=3 posts)")
     for h in d["best_posting_hours_utc"][:5]:
-        print(f"  {h['hour_utc']:02d}:00   avg {h['avg_score']:>7}   ({h['posts']} posts)")
+        print(f"  {h['hour_utc']:02d}:00   med {h['median']:>6} / mean {h['mean']:>6}   ({h['posts']} posts)")
 
     _hr("Best days")
     for x in d["best_posting_days"][:3]:
-        print(f"  {x['day']:10} avg {x['avg_score']}")
+        print(f"  {x['day']:10} med {x['median']} / mean {x['mean']}   ({x['posts']} posts)")
 
-    _hr("Top flairs (avg score)")
+    _hr("Top flairs (median / mean)")
     for f in d["score_by_flair"][:6]:
         if f["value"]:
-            print(f"  {str(f['value']):20} {f['avg_score']:>8}")
+            print(f"  {str(f['value']):20} med {f['median']:>7} / mean {f['mean']:>7}   ({f['count']} posts)")
 
     kw = d.get("winning_keywords", [])
     if kw:
