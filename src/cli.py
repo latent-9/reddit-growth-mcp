@@ -171,6 +171,14 @@ def _print_draft(d: dict) -> None:
         _hr("Suggestions to improve")
         for s in d["suggestions"]:
             print(f"  • {s}")
+    hrs = d.get("best_posting_hours_utc", [])
+    days = d.get("best_posting_days", [])
+    if hrs or days:
+        _hr("Recommended posting window")
+        if hrs:
+            print("  Hours (UTC): " + ", ".join(f"{h['hour_utc']:02d}:00" for h in hrs[:3]))
+        if days:
+            print("  Days: " + ", ".join(x["day"] for x in days[:2]))
 
 
 def main(argv=None) -> int:
