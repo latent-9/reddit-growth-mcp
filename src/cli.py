@@ -99,6 +99,23 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
     for name, sig in d["title_signal_lift"].items():
         print(f"  {name:18} {sig['lift_pct']:+.0f}%   (n={sig['sample_with']})")
 
+    vp = d.get("viral_profile", {})
+    if vp.get("available"):
+        rc = vp["recipe"]
+        _hr(f"VIRAL RECIPE (top {vp['viral_count']} posts, score >= {vp['viral_threshold']})")
+        print(f"  Media : {rc['media_type']['value']} ({rc['media_type']['share']:.0%} of viral)")
+        if rc["flair"]["value"]:
+            print(f"  Flair : {rc['flair']['value']} ({rc['flair']['share']:.0%})")
+        print(f"  Time  : {rc['time_block_utc']['value']} ({rc['time_block_utc']['share']:.0%})")
+        t = rc["title"]
+        traits = [n for n, key in [("question", "question"), ("showcase", "showcase"),
+                                   ("numbers", "has_number"), ("clickbait", "clickbait")]
+                  if t[key]["overrepresented"]]
+        print(f"  Title : ~{t['median_char_length']} chars"
+              + (f"; over-represented: {', '.join(traits)}" if traits else ""))
+        if rc["keywords"]:
+            print(f"  Words : {', '.join(rc['keywords'][:6])}")
+
     _hr("Top examples")
     for ex in d["top_examples"][:5]:
         cbf = " ⚠cb" if ex.get("clickbait", 0) >= 0.4 else ""

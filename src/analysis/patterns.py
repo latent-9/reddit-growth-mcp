@@ -113,6 +113,66 @@ def _clickbait_effect(rows: List[Dict[str, Any]], perf: str) -> Dict[str, Any]:
             "lift_pct": lift, "clickbait_sample": len(baity), "verdict": verdict}
 
 
+def _share(rows: List[Dict[str, Any]], key: str) -> float:
+    return round(sum(1 for r in rows if r.get(key)) / len(rows), 2) if rows else 0.0
+
+
+def _dominant(rows: List[Dict[str, Any]], key: str):
+    """Most common value of `key` among rows, with its share."""
+    counts: Dict[Any, int] = defaultdict(int)
+    for r in rows:
+        counts[r.get(key)] += 1
+    if not counts:
+        return None, 0.0
+    val, c = max(counts.items(), key=lambda kv: kv[1])
+    return val, round(c / len(rows), 2)
+
+
+def _viral_profile(rows: List[Dict[str, Any]], perf: str,
+                   threshold: float) -> Dict[str, Any]:
+    """Describe what the top-decile (viral) posts have in common, and which
+    traits are over-represented versus the rest — the concrete 'viral recipe'.
+    """
+    viral = [r for r in rows if r[perf] >= threshold and r[perf] > 0]
+    rest = [r for r in rows if r[perf] < threshold]
+    if len(viral) < 5:
+        return {"available": False, "reason": "too few viral posts to profile"}
+
+    media, media_share = _dominant(viral, "media_type")
+    flair, flair_share = _dominant(viral, "flair")
+    block, block_share = _dominant(viral, "time_block")
+
+    def over(key):
+        v, r = _share(viral, key), _share(rest, key)
+        return {"viral": v, "rest": r, "overrepresented": v > r + 0.05}
+
+    def cb_share(rs):
+        return round(sum(1 for r in rs if r.get("clickbait", 0) >= 0.4) / len(rs), 2) if rs else 0.0
+
+    title = {
+        "median_char_length": _median([r["char_length"] for r in viral]),
+        "question": over("is_question"),
+        "showcase": over("is_showcase"),
+        "has_number": over("has_number"),
+        "clickbait": {"viral": cb_share(viral), "rest": cb_share(rest),
+                      "overrepresented": cb_share(viral) > cb_share(rest) + 0.05},
+    }
+    kws = [k["word"] for k in winning_keywords(viral, top_frac=0.6, min_count=2, score_key=perf)][:8]
+
+    return {
+        "available": True,
+        "viral_threshold": threshold,
+        "viral_count": len(viral),
+        "recipe": {
+            "media_type": {"value": media, "share": media_share},
+            "flair": {"value": flair, "share": flair_share},
+            "time_block_utc": {"value": block, "share": block_share},
+            "title": title,
+            "keywords": kws,
+        },
+    }
+
+
 def analyze_post_patterns(
     subreddit_name: str,
     reddit: praw.Reddit = None,
@@ -192,6 +252,7 @@ def analyze_post_patterns(
     # "Strong post" threshold = 75th percentile of the metric. Timing buckets
     # rank by hit_rate (share of strong posts), which is robust to outliers.
     strong = percentile(sorted(vals), 75)
+    strong90 = percentile(sorted(vals), 90)  # top-decile = "viral" for the DNA profile
 
     def _by_hit(rows_, key, min_n):
         stats = _group_stats(rows_, key, perf, min_n=min_n, threshold=strong)
@@ -223,6 +284,7 @@ def analyze_post_patterns(
             "median_comments": _median([r["num_comments"] for r in rows]),
         },
         "clickbait_effect": _clickbait_effect(rows, perf),
+        "viral_profile": _viral_profile(rows, perf, strong90),
         "best_time_blocks": time_blocks,
         "best_posting_hours_utc": best_hours,
         "best_posting_days": best_days,
