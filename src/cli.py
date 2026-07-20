@@ -41,7 +41,16 @@ def _hr(title: str) -> None:
     print("─" * min(len(title), 60))
 
 
-def _print_patterns(d: dict) -> None:
+def _fmt_hour(hour_utc: int, tz: float) -> str:
+    """Render an hour as UTC, plus local time when a tz offset is given."""
+    if not tz:
+        return f"{hour_utc:02d}:00 UTC"
+    local = (hour_utc + tz) % 24
+    lh, lm = int(local), int(round((local % 1) * 60))
+    return f"{hour_utc:02d}:00 UTC = {lh:02d}:{lm:02d} local"
+
+
+def _print_patterns(d: dict, tz: float = 0.0) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
     _hr(f"POST PATTERNS · r/{d['subreddit']}  ({d['source']}, metric={d.get('metric')}, "
@@ -63,9 +72,9 @@ def _print_patterns(d: dict) -> None:
     for b in d.get("best_time_blocks", []):
         print(f"  {b['block']:12} med {b['median']:>7} / mean {b['mean']:>7}   ({b['posts']} posts)")
 
-    _hr("Best posting hours (UTC, >=3 posts)")
+    _hr("Best posting hours (>=3 posts)")
     for h in d["best_posting_hours_utc"][:5]:
-        print(f"  {h['hour_utc']:02d}:00   med {h['median']:>6} / mean {h['mean']:>6}   ({h['posts']} posts)")
+        print(f"  {_fmt_hour(h['hour_utc'], tz):<28} med {h['median']:>6} / mean {h['mean']:>6}   ({h['posts']} posts)")
 
     _hr("Best days")
     for x in d["best_posting_days"][:3]:
@@ -175,6 +184,8 @@ def main(argv=None) -> int:
     sp.add_argument("--metric", default="score",
                     choices=["score", "comments", "discussion", "quality"],
                     help="score=upvotes, discussion=comments/upvote (anti-clickbait), quality=clickbait-damped")
+    sp.add_argument("--tz", type=float, default=0.0,
+                    help="Local UTC offset in hours to also show posting times in (e.g. 7 for WIB)")
 
     sa = sub.add_parser("acceptance", help="Removal rate + what gets nuked")
     sa.add_argument("subreddit")
@@ -214,6 +225,8 @@ def main(argv=None) -> int:
 
     if args.json:
         print(json.dumps(result, indent=2, default=str))
+    elif args.cmd == "patterns":
+        _print_patterns(result, getattr(args, "tz", 0.0))
     else:
         printer(result)
     return 0
