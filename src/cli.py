@@ -280,11 +280,57 @@ def _print_insight(d: dict) -> None:
     )
 
 
+def _plan_markdown(plan: dict, tz: float) -> str:
+    """Render a growth plan as Markdown for saving or sharing."""
+    t = plan["target"]
+    out = ["# Growth plan", "", f"## Target: r/{t['subreddit']}", ""]
+    out.append(
+        f"- growth **{t['growth_score']}** · viral {t['viral_potential']} · "
+        f"{t['posts_per_day']} posts/day · {t['median_comments']} comments · "
+        f"{t['removal_rate']:.0%} removed ({t['safety']})"
+    )
+    if t.get("insight_tier"):
+        out.append(f"- discussion depth: **{t['insight_tier']}** ({t.get('substantive_ratio', 0):.0%} substantive)")
+    if plan["avoided"]:
+        out.append(f"- avoided (strict/low-confidence): {', '.join('r/' + s for s in plan['avoided'])}")
+
+    if plan["also_consider"]:
+        out += ["", "## Also worth posting to", ""]
+        for p in plan["also_consider"]:
+            out.append(
+                f"- r/{p['subreddit']} — growth {p.get('growth_score', 0)}, "
+                f"{p['removal_rate']:.0%} removed ({p.get('safety')})"
+            )
+
+    rc = plan.get("recipe")
+    if rc:
+        out += ["", "## What to post (viral recipe)", ""]
+        out.append(f"- Format: {rc['media_type']['value']}")
+        if rc["flair"]["value"]:
+            out.append(f"- Flair: {rc['flair']['value']}")
+        tag = rc.get("title_tag", {})
+        if tag.get("share", 0) >= 0.3 and tag.get("common"):
+            out.append(f"- Title tag: {', '.join('[' + x + ']' for x in tag['common'])}")
+        out.append(f"- Length: ~{rc['title']['median_char_length']} chars, no clickbait")
+        if rc.get("keywords"):
+            out.append(f"- Keywords: {', '.join(rc['keywords'][:5])}")
+    if plan["best_posting_hours_utc"]:
+        out += ["", "## When to post", ""]
+        out.append("- " + " / ".join(_fmt_hour(h["hour_utc"], tz) for h in plan["best_posting_hours_utc"]))
+    if plan["best_posting_days"]:
+        out.append("- Days: " + ", ".join(x["day"] for x in plan["best_posting_days"]))
+    out += ["", f"_{plan.get('disclaimer', '')}_"]
+    return "\n".join(out)
+
+
 def _run_plan(args, reddit) -> None:
     """Growth planner: rank subs, pick the safest strong one, print its recipe."""
     plan = build_growth_plan(args.subreddits, reddit, args.window)
     if "error" in plan:
         print("Could not build a plan:", plan["error"])
+        return
+    if getattr(args, "md", False):
+        print(_plan_markdown(plan, args.tz))
         return
 
     t = plan["target"]
@@ -375,6 +421,7 @@ def main(argv=None) -> int:
     spl.add_argument("subreddits", nargs="+")
     spl.add_argument("--window", default="30d")
     spl.add_argument("--tz", type=float, default=0.0)
+    spl.add_argument("--md", action="store_true", help="Output the plan as Markdown (for saving/sharing)")
 
     sd = sub.add_parser("draft", help="Evaluate a post draft")
     sd.add_argument("subreddit")
