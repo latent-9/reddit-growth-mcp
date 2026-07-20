@@ -13,7 +13,7 @@ def register_resources(mcp, reddit: praw.Reddit) -> None:
         """Server capabilities and usage overview."""
         return {
             "name": "Reddit Analyzer",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "description": (
                 "Analyze subreddits and post performance: find high-traffic "
                 "communities, learn each sub's acceptance rules, and evaluate "
