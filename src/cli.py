@@ -200,7 +200,7 @@ def _print_compare(d: dict) -> None:
     print(f"({d['criteria']})")
 
 
-def _print_draft(d: dict) -> None:
+def _print_draft(d: dict, tz: float = 0.0) -> None:
     if "error" in d:
         print("Error:", d["error"])
         return
@@ -225,6 +225,9 @@ def _print_draft(d: dict) -> None:
             f"  Viral recipe: {rc['media']} / flair {rc['flair']} / {rc['time_block_utc']}"
             + (f" / words {rc['keywords']}" if rc.get("keywords") else "")
         )
+        if rc.get("title_tags"):
+            tags = ", ".join(f"[{t}]" for t in rc["title_tags"])
+            print(f"  Tag hint: prefix your title with one of {tags}")
     if d.get("blocking_issues"):
         _hr("Blocking issues (likely removal)")
         for i in d["blocking_issues"]:
@@ -246,7 +249,7 @@ def _print_draft(d: dict) -> None:
     if hrs or days:
         _hr("Recommended posting window")
         if hrs:
-            print("  Hours (UTC): " + ", ".join(f"{h['hour_utc']:02d}:00" for h in hrs[:3]))
+            print("  " + " / ".join(_fmt_hour(h["hour_utc"], tz) for h in hrs[:3]))
         if days:
             print("  Days: " + ", ".join(x["day"] for x in days[:2]))
 
@@ -371,6 +374,7 @@ def main(argv=None) -> int:
     sd.add_argument("--body", default="")
     sd.add_argument("--type", default="text", dest="post_type")
     sd.add_argument("--flair", default=None)
+    sd.add_argument("--tz", type=float, default=0.0, help="Local UTC offset for posting times")
 
     args = p.parse_args(argv)
     reddit = _get_reddit()
@@ -411,6 +415,8 @@ def main(argv=None) -> int:
         print(json.dumps(result, indent=2, default=str))
     elif args.cmd == "patterns":
         _print_patterns(result, getattr(args, "tz", 0.0))
+    elif args.cmd == "draft":
+        _print_draft(result, getattr(args, "tz", 0.0))
     else:
         printer(result)
     return 0
