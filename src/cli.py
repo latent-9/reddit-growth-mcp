@@ -232,6 +232,14 @@ def _run_plan(args, reddit) -> None:
     if skipped:
         print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in skipped)}")
 
+    # Other safe/moderate subs worth cross-posting the same content to.
+    also = [p for p in (eligible or []) if p["subreddit"] != name]
+    if also:
+        _hr("Also worth posting to (safe, tailor per sub)")
+        for p in also[:4]:
+            print(f"  r/{p['subreddit']:18} growth {p.get('growth_score', 0):>6} · "
+                  f"{p['removal_rate']:.0%} removed ({p.get('safety')})")
+
     pat = analyze_post_patterns(name, reddit, "top", "month", 200, "auto")
     if "error" in pat:
         print("  (pattern read unavailable right now)"); return
