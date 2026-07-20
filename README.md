@@ -25,6 +25,7 @@ API credentials, because it reads from a public historical archive.
 | `analyze_insight` | Discussion depth: how substantive a sub's comments are (median length, substantive ratio) — not just comment count | No |
 | `growth_plan` | One call: safest strong target, cross-post options, viral recipe, and best posting times | No |
 | `evaluate_draft` | Predict a draft's performance (0-100) and acceptance risk, with drivers and fixes | No |
+| `evaluate_draft_across` | Score one draft across subs, ranked by size-fair fit (percentile) vs raw reach | No |
 | `analyze_subreddit` | Estimate a subreddit's activity (posts/day); uses the archive without credentials | No |
 | `find_target_subreddits_tool` | Discover and rank subreddits for topics by estimated traffic | Yes |
 | `fetch_posts`, `fetch_multiple`, `search_subreddit`, `fetch_comments` | Raw data access | Yes |
@@ -76,7 +77,13 @@ uv run python -m src.cli acceptance technology
 uv run python -m src.cli compare Fedora gnome linux
 uv run python -m src.cli plan singularity LocalLLaMA mcp --tz 7
 uv run python -m src.cli draft ClaudeAI --title "I built an ASCII art tool" --type image
+uv run python -m src.cli fit singularity LocalLLaMA mcp --title "..." --type video
 ```
+
+`fit` scores one draft across several subreddits and ranks by a size-fair fit
+(the draft's percentile within each sub's own score distribution) alongside raw
+expected reach, so a small sub where the post lands in the top decile isn't
+buried by a big sub's larger absolute numbers.
 
 Add `--json` to any command for raw output.
 

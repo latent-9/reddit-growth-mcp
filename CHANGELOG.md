@@ -17,6 +17,9 @@ semantic versioning.
   draft is missing to match what goes viral in the sub.
 
 ### Added
+- `evaluate_draft_across` (`fit`): score one draft across subreddits and rank by
+  size-normalized fit (percentile within each sub) versus raw reach, so subs of
+  different sizes compare fairly.
 - `analyze_insight`: measure a subreddit's discussion depth (median comment
   length and substantive ratio) rather than just comment count, to find where
   thoughtful discussion happens. Credential-free; exposed as an MCP tool and the
