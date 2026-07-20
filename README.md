@@ -195,8 +195,13 @@ The tool is built to avoid the common failure modes of naive Reddit analytics.
 ## Development
 
 ```bash
-uv run pytest -q
+uv sync --extra dev
+uv run pytest -q                       # tests
+uv run ruff check src tests            # lint
+uv run ruff format src tests           # format
 ```
+
+CI runs the lint, format check, and tests on every push and pull request.
 
 The analysis logic lives in `src/analysis/` (traffic, acceptance, patterns,
 draft, compare, arctic, helpers). The MCP surface is `src/server.py` and the
