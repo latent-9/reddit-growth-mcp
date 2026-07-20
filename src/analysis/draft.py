@@ -104,7 +104,9 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str], patte
         if best_band != cur:
             suggestions.append(f"Best title length is '{best_band}'; yours is '{cur}'.")
 
-    # Title signals (question/list/showcase/number/emoji).
+    # Title signals (question/list/showcase/number/emoji). Only trust a signal
+    # when both groups cleared the sample floor — otherwise a lone lucky post
+    # yields absurd lifts (e.g. +72100%) that would swamp the projection.
     lift = patterns.get("title_signal_lift", {})
     for feat, key in [
         ("is_question", "question_titles"),
@@ -113,15 +115,17 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str], patte
         ("has_number", "has_number"),
         ("has_emoji", "has_emoji"),
     ]:
-        if tf.get(feat):
-            pct = lift.get(key, {}).get("lift_pct", 0)
+        sig = lift.get(key, {})
+        if tf.get(feat) and sig.get("reliable"):
+            pct = sig.get("lift_pct", 0)
             r = _clamp(1 + pct / 100.0, 0.5, 2.0)
             mult *= r
             drivers.append({"factor": key, "impact": f"×{round(r, 2)} ({pct:+.0f}%)"})
-    # Suggest a high-lift signal the draft is missing.
+    # Suggest a high-lift signal the draft is missing (reliable signals only).
     for key, feat in [("has_number", "has_number"), ("showcase_titles", "is_showcase")]:
-        if not tf.get(feat) and lift.get(key, {}).get("lift_pct", 0) > 30:
-            suggestions.append(f"Titles with '{key}' score {lift[key]['lift_pct']:+.0f}% here — consider adding.")
+        sig = lift.get(key, {})
+        if not tf.get(feat) and sig.get("reliable") and sig.get("lift_pct", 0) > 30:
+            suggestions.append(f"Titles with '{key}' score {sig['lift_pct']:+.0f}% here — consider adding.")
 
     # Flair.
     flairs = {f["value"]: f["mean"] for f in patterns.get("score_by_flair", []) if f["value"]}
@@ -251,8 +255,16 @@ def evaluate_draft(
     prediction = _predict_performance(title, post_type, flair, patterns)
     viral = _viral_alignment(title, post_type, flair, patterns)
 
+    # Verdict folds in the sub's base removal rate: a post can be fully
+    # compliant yet still be a coin flip in a sub that removes most of what it
+    # gets, so a high base rate is risky on its own (not "likely_accepted").
+    removal = acceptance.get("removal_rate_estimate") or 0.0
     if compliance["blocking_issues"]:
         verdict = "likely_removed"
+    elif removal >= 0.5 and compliance["warnings"]:
+        verdict = "likely_removed"
+    elif removal >= 0.5:
+        verdict = "risky"
     elif acceptance.get("strictness") == "high" and compliance["warnings"]:
         verdict = "risky"
     else:
