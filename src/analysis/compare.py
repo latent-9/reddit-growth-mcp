@@ -30,6 +30,8 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
 
     live_scores = [r["score"] for r in live]
     median_score = sorted(live_scores)[len(live_scores) // 2] if live_scores else 0
+    live_comments = sorted(r["num_comments"] for r in live)
+    median_comments = live_comments[len(live_comments) // 2] if live_comments else 0
     # Opportunity: reach of a typical surviving post, discounted by removal risk.
     opportunity = round(median_score * (1 - removal_rate), 1)
 
@@ -43,6 +45,7 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
         "sampled": len(rows),
         "removal_rate": removal_rate,
         "median_score": median_score,
+        "median_comments": median_comments,
         "avg_score": safe_mean(live_scores),
         "best_media": top_media,
         "opportunity_score": opportunity,

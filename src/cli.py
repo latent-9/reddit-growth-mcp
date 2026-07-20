@@ -130,11 +130,12 @@ def _print_compare(d: dict) -> None:
     if "error" in d:
         print("Error:", d["error"]); return
     _hr("SUBREDDIT COMPARISON  (higher opportunity = better)")
-    print(f"{'subreddit':20} {'opp':>7} {'median':>7} {'removal':>8} {'best media':>12}  conf")
+    print(f"{'subreddit':20} {'opp':>7} {'upvotes':>8} {'comments':>9} {'removal':>8} {'best media':>12}  conf")
     for p in d["ranked"]:
         conf = "low*" if p.get("low_confidence") else "ok"
-        print(f"  r/{p['subreddit']:17} {p['opportunity_score']:>7} {p['median_score']:>7} "
-              f"{p['removal_rate']:>7.0%} {str(p['best_media']):>12}  {conf}")
+        print(f"  r/{p['subreddit']:17} {p['opportunity_score']:>7} {p['median_score']:>8} "
+              f"{p.get('median_comments', 0):>9} {p['removal_rate']:>7.0%} "
+              f"{str(p['best_media']):>12}  {conf}")
     if any(p.get("low_confidence") for p in d["ranked"]):
         print("  * low = many AutoMod-filtered posts; add creds for accuracy")
     for f in d.get("failed", []):
