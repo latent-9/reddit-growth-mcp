@@ -133,7 +133,9 @@ def analyze_subreddit(
 
 
 @mcp.tool(
-    description="Analyze a subreddit's removal rate and what tends to get removed (official rules when credentials are present)",
+    description=(
+        "Analyze a subreddit's removal rate and what tends to get removed (official rules when credentials are present)"
+    ),
     annotations={"readOnlyHint": True},
 )
 def analyze_acceptance(
@@ -220,7 +222,10 @@ def compare_subreddits(
 
 
 @mcp.tool(
-    description="Measure a subreddit's discussion depth (insight): how substantive its comments are, plus a heuristic sentiment read. No creds needed.",
+    description=(
+        "Measure a subreddit's discussion depth (insight): how substantive its "
+        "comments are, plus a heuristic sentiment read. No creds needed."
+    ),
     annotations={"readOnlyHint": True},
 )
 def analyze_insight(
