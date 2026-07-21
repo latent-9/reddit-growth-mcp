@@ -17,25 +17,29 @@ run()  { printf "\n${D}\$ ${R}${T}reddit-growth %s${R}\n${D}   …fetching from 
 pause(){ printf "\n${D}──  press enter to return to the menu  ──${R}"; read -r _; }
 
 logo() {
-  printf "${O}        .-.${R}\n"
-  printf "${O}       (o.o)${R}    ${C}${T}reddit-growth${R}\n"
-  printf "${O}     ___${T}|=|${R}${O}___${R}  ${D}grow where you'll be seen${R}\n"
-  printf "${O}    /  '-'  \\\\${R}\n"
+  printf "${O}       .---.${R}\n"
+  printf "${O}      ( o o )${R}   ${C}${T}reddit-growth${R}\n"
+  printf "${O}       \\\\ v /${R}    ${D}grow where you'll be seen${R}\n"
+  printf "${O}        '-'${R}\n"
 }
 
 # Preset subreddits (all verified to have archive data). Numbered for quick pick.
 SUBS_OPTS=(ChatGPT OpenAI ClaudeAI grok DeepSeek Bard perplexity_ai MistralAI \
-           LocalLLaMA ollama mcp cursor singularity \
-           StableDiffusion midjourney comfyui MachineLearning dataisbeautiful \
-           programming rust webdev technology)
+           LocalLLaMA ollama mcp cursor LLMDevs \
+           singularity artificial Futurology aiwars MachineLearning \
+           StableDiffusion midjourney comfyui dataisbeautiful \
+           programming Python javascript rust webdev \
+           selfhosted homelab buildapc technology)
 
 # Show the pick-list, read numbers (or typed names), resolve into SEL.
 pick() {
   printf "${D}  pick number(s) — e.g.  ${R}1 4 5${D}  — or just type subreddit name(s):${R}\n\n"
   printf "  ${C}AI chat${R}    ${G}1${R} ChatGPT  ${G}2${R} OpenAI  ${G}3${R} ClaudeAI  ${G}4${R} grok  ${G}5${R} DeepSeek  ${G}6${R} Bard  ${G}7${R} perplexity_ai  ${G}8${R} MistralAI\n"
-  printf "  ${C}local/agent${R} ${G}9${R} LocalLLaMA  ${G}10${R} ollama  ${G}11${R} mcp  ${G}12${R} cursor  ${G}13${R} singularity\n"
-  printf "  ${C}AI image${R}   ${G}14${R} StableDiffusion  ${G}15${R} midjourney  ${G}16${R} comfyui  ${G}17${R} MachineLearning  ${G}18${R} dataisbeautiful\n"
-  printf "  ${C}dev/etc${R}    ${G}19${R} programming  ${G}20${R} rust  ${G}21${R} webdev  ${G}22${R} technology\n\n"
+  printf "  ${C}agents/local${R} ${G}9${R} LocalLLaMA  ${G}10${R} ollama  ${G}11${R} mcp  ${G}12${R} cursor  ${G}13${R} LLMDevs\n"
+  printf "  ${C}AI general${R} ${G}14${R} singularity  ${G}15${R} artificial  ${G}16${R} Futurology  ${G}17${R} aiwars  ${G}18${R} MachineLearning\n"
+  printf "  ${C}image/data${R} ${G}19${R} StableDiffusion  ${G}20${R} midjourney  ${G}21${R} comfyui  ${G}22${R} dataisbeautiful\n"
+  printf "  ${C}dev${R}        ${G}23${R} programming  ${G}24${R} Python  ${G}25${R} javascript  ${G}26${R} rust  ${G}27${R} webdev\n"
+  printf "  ${C}infra/hw${R}   ${G}28${R} selfhosted  ${G}29${R} homelab  ${G}30${R} buildapc  ${G}31${R} technology\n\n"
   printf "${Y}  ▸ ${R}"; read -r raw
   SEL=""
   for tok in $raw; do
