@@ -38,24 +38,15 @@ SUBS_OPTS=(ChatGPT OpenAI ClaudeAI grok DeepSeek Bard perplexity_ai MistralAI \
            selfhosted homelab buildapc technology \
            SaaS SideProject startups indiehackers Entrepreneur marketing SEO growthhacking)
 
+BANNER_FILE="$(dirname "$0")/banner.txt"
 logo_ansi() {
-  printf "\n"
-  printf "   ${O}${T}reddit${R}${D}·${R}${G}${T}growth${R}   ${G}▁▂▃▄▅▇${R}${O}↗${R}\n"
-  printf "   ${D}────────────────────────────────────${R}\n"
-  printf "   ${D}Ready to grow? Pick a mode and find where you'll be seen ${R}${G}↓${R}\n"
+  printf "\n${O}"
+  cat "$BANNER_FILE" 2>/dev/null || printf "  reddit-growth-mcp\n"
+  printf "${R}"
+  printf "  ${O}${T}mcp${R}  ${G}▁▂▃▄▅▇↗${R}  ${D}post where you'll be seen — pick a mode${R} ${G}↓${R}\n\n"
 }
 
-show_header() {
-  cls
-  if [ "$HAS_GUM" = 1 ]; then
-    gum style --border rounded --border-foreground "$GO" --foreground "$GO" --bold \
-      --padding "0 3" --margin "1 0 0 1" "reddit·growth   ▁▂▃▄▅▇↗"
-    gum style --foreground 250 --margin "0 0 1 2" \
-      "Ready to grow? Pick a mode — find where you'll be seen ↓"
-  else
-    logo_ansi; line
-  fi
-}
+show_header() { cls; logo_ansi; }
 
 # ---- selection helpers (gum when available, numbered fallback otherwise) ----
 MODES=(
