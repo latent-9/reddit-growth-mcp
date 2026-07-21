@@ -23,17 +23,19 @@ logo() {
   printf "${O}    /  '-'  \\\\${R}\n"
 }
 
-# Preset subreddits (all known to have archive data). Numbered for quick pick.
-SUBS_OPTS=(singularity LocalLLaMA mcp ClaudeAI OpenAI ChatGPT \
-           StableDiffusion comfyui MachineLearning dataisbeautiful \
-           programming rust golang webdev technology)
+# Preset subreddits (all verified to have archive data). Numbered for quick pick.
+SUBS_OPTS=(ChatGPT OpenAI ClaudeAI grok DeepSeek Bard perplexity_ai MistralAI \
+           LocalLLaMA ollama mcp cursor singularity \
+           StableDiffusion midjourney comfyui MachineLearning dataisbeautiful \
+           programming rust webdev technology)
 
 # Show the pick-list, read numbers (or typed names), resolve into SEL.
 pick() {
-  printf "${D}  pick number(s) — e.g.  ${R}1 10${D}  — or just type subreddit name(s):${R}\n\n"
-  printf "  ${C}AI/LLMs${R}   ${G}1${R} singularity  ${G}2${R} LocalLLaMA  ${G}3${R} mcp  ${G}4${R} ClaudeAI  ${G}5${R} OpenAI  ${G}6${R} ChatGPT\n"
-  printf "  ${C}AI-image${R}  ${G}7${R} StableDiffusion  ${G}8${R} comfyui  ${G}9${R} MachineLearning  ${G}10${R} dataisbeautiful\n"
-  printf "  ${C}dev/etc${R}   ${G}11${R} programming  ${G}12${R} rust  ${G}13${R} golang  ${G}14${R} webdev  ${G}15${R} technology\n\n"
+  printf "${D}  pick number(s) — e.g.  ${R}1 4 5${D}  — or just type subreddit name(s):${R}\n\n"
+  printf "  ${C}AI chat${R}    ${G}1${R} ChatGPT  ${G}2${R} OpenAI  ${G}3${R} ClaudeAI  ${G}4${R} grok  ${G}5${R} DeepSeek  ${G}6${R} Bard  ${G}7${R} perplexity_ai  ${G}8${R} MistralAI\n"
+  printf "  ${C}local/agent${R} ${G}9${R} LocalLLaMA  ${G}10${R} ollama  ${G}11${R} mcp  ${G}12${R} cursor  ${G}13${R} singularity\n"
+  printf "  ${C}AI image${R}   ${G}14${R} StableDiffusion  ${G}15${R} midjourney  ${G}16${R} comfyui  ${G}17${R} MachineLearning  ${G}18${R} dataisbeautiful\n"
+  printf "  ${C}dev/etc${R}    ${G}19${R} programming  ${G}20${R} rust  ${G}21${R} webdev  ${G}22${R} technology\n\n"
   printf "${Y}  ▸ ${R}"; read -r raw
   SEL=""
   for tok in $raw; do
