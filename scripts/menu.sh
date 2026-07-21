@@ -25,21 +25,23 @@ logo() {
 
 # Preset subreddits (all verified to have archive data). Numbered for quick pick.
 SUBS_OPTS=(ChatGPT OpenAI ClaudeAI grok DeepSeek Bard perplexity_ai MistralAI \
-           LocalLLaMA ollama mcp cursor LLMDevs \
+           LocalLLaMA ollama mcp cursor LLMDevs PromptEngineering \
            singularity artificial Futurology aiwars MachineLearning \
            StableDiffusion midjourney comfyui dataisbeautiful \
-           programming Python javascript rust webdev \
-           selfhosted homelab buildapc technology)
+           programming Python javascript rust webdev coolgithubprojects \
+           selfhosted homelab buildapc technology \
+           SaaS SideProject startups indiehackers Entrepreneur marketing SEO growthhacking)
 
 # Show the pick-list, read numbers (or typed names), resolve into SEL.
 pick() {
   printf "${D}  pick number(s) — e.g.  ${R}1 4 5${D}  — or just type subreddit name(s):${R}\n\n"
-  printf "  ${C}AI chat${R}    ${G}1${R} ChatGPT  ${G}2${R} OpenAI  ${G}3${R} ClaudeAI  ${G}4${R} grok  ${G}5${R} DeepSeek  ${G}6${R} Bard  ${G}7${R} perplexity_ai  ${G}8${R} MistralAI\n"
-  printf "  ${C}agents/local${R} ${G}9${R} LocalLLaMA  ${G}10${R} ollama  ${G}11${R} mcp  ${G}12${R} cursor  ${G}13${R} LLMDevs\n"
-  printf "  ${C}AI general${R} ${G}14${R} singularity  ${G}15${R} artificial  ${G}16${R} Futurology  ${G}17${R} aiwars  ${G}18${R} MachineLearning\n"
-  printf "  ${C}image/data${R} ${G}19${R} StableDiffusion  ${G}20${R} midjourney  ${G}21${R} comfyui  ${G}22${R} dataisbeautiful\n"
-  printf "  ${C}dev${R}        ${G}23${R} programming  ${G}24${R} Python  ${G}25${R} javascript  ${G}26${R} rust  ${G}27${R} webdev\n"
-  printf "  ${C}infra/hw${R}   ${G}28${R} selfhosted  ${G}29${R} homelab  ${G}30${R} buildapc  ${G}31${R} technology\n\n"
+  printf "  ${C}AI chat${R}     ${G}1${R} ChatGPT  ${G}2${R} OpenAI  ${G}3${R} ClaudeAI  ${G}4${R} grok  ${G}5${R} DeepSeek  ${G}6${R} Bard  ${G}7${R} perplexity_ai  ${G}8${R} MistralAI\n"
+  printf "  ${C}agents/AI${R}   ${G}9${R} LocalLLaMA  ${G}10${R} ollama  ${G}11${R} mcp  ${G}12${R} cursor  ${G}13${R} LLMDevs  ${G}14${R} PromptEngineering\n"
+  printf "  ${C}AI general${R}  ${G}15${R} singularity  ${G}16${R} artificial  ${G}17${R} Futurology  ${G}18${R} aiwars  ${G}19${R} MachineLearning\n"
+  printf "  ${C}image/data${R}  ${G}20${R} StableDiffusion  ${G}21${R} midjourney  ${G}22${R} comfyui  ${G}23${R} dataisbeautiful\n"
+  printf "  ${C}dev${R}         ${G}24${R} programming  ${G}25${R} Python  ${G}26${R} javascript  ${G}27${R} rust  ${G}28${R} webdev  ${G}29${R} coolgithubprojects\n"
+  printf "  ${C}infra/hw${R}    ${G}30${R} selfhosted  ${G}31${R} homelab  ${G}32${R} buildapc  ${G}33${R} technology\n"
+  printf "  ${C}startup/biz${R} ${G}34${R} SaaS  ${G}35${R} SideProject  ${G}36${R} startups  ${G}37${R} indiehackers  ${G}38${R} Entrepreneur  ${G}39${R} marketing  ${G}40${R} SEO  ${G}41${R} growthhacking\n\n"
   printf "${Y}  ▸ ${R}"; read -r raw
   SEL=""
   for tok in $raw; do
