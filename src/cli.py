@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 
 from dotenv import load_dotenv
@@ -229,24 +230,51 @@ def _print_compare(d: dict) -> None:
     print(f"({d['criteria']})")
 
 
+def _verdict_icon(verdict: str) -> str:
+    """Green/amber/red light for the acceptance verdict."""
+    return {"likely_accepted": "🟢", "risky": "🟡", "likely_removed": "🔴"}.get(verdict, "⚪")
+
+
+def _rate_icon(rate: float) -> str:
+    """Traffic-light a removal rate: green low, amber medium, red high."""
+    return "🟢" if rate < 0.20 else "🟡" if rate < 0.50 else "🔴"
+
+
+def _band_icon(band: str) -> str:
+    """Candle-style read on projected reach: green/up for high, red/down for low."""
+    return {"viral": "🟢📈", "strong": "🟢📈", "average": "🟡➖", "weak": "🔴📉"}.get(band, "")
+
+
+def _driver_icon(impact: str) -> str:
+    """Green when a driver boosts the score (×>1), red when it drags (×<1)."""
+    m = re.search(r"×\s*([0-9.]+)", impact)
+    if not m:
+        return "⚪"
+    v = float(m.group(1))
+    return "🟢" if v > 1.0 else "🔴" if v < 1.0 else "⚪"
+
+
 def _print_draft(d: dict, tz: float = 0.0) -> None:
     if "error" in d:
         print("Error:", d["error"])
         return
     _hr(f"DRAFT EVALUATION · r/{d['subreddit']}")
+    removal = d.get("removal_rate_estimate", 0)
     print(
-        f"Acceptance: {d['acceptance_verdict']} (strictness {d.get('subreddit_strictness')}, "
-        f"removal {d.get('removal_rate_estimate', 0):.0%})"
+        f"{_verdict_icon(d['acceptance_verdict'])} Acceptance: {d['acceptance_verdict']} "
+        f"(strictness {d.get('subreddit_strictness')}, removal {_rate_icon(removal)} {removal:.0%})"
     )
     print(
-        f"Performance: {d['performance_score']}/100 [{d['performance_band']}]  ·  "
-        f"projected score ~{d['projected_score']} (sub avg {d['baseline_avg_score']})"
+        f"{_band_icon(d['performance_band'])} Performance: {d['performance_score']}/100 "
+        f"[{d['performance_band']}]  ·  projected reach ~{d['projected_score']} "
+        f"(sub avg {d['baseline_avg_score']})"
     )
     if d.get("clickbait_risk", 0) >= 0.4:
         print(f"Clickbait risk: {d['clickbait_risk']} (sub verdict: {d.get('sub_clickbait_verdict')})")
     va = d.get("viral_alignment")
     if va:
         print(f"Viral-recipe match: {va['alignment_pct']}% ({va['matched']}/{va['total']} traits)")
+        print("  (reach and recipe-match are separate: a high reach can come from one high-impact trait)")
         if va.get("missing"):
             print(f"  Missing for viral: {', '.join(va['missing'])}")
         rc = va["recipe"]
@@ -268,7 +296,7 @@ def _print_draft(d: dict, tz: float = 0.0) -> None:
     if d.get("score_drivers"):
         _hr("Score drivers")
         for dr in d["score_drivers"]:
-            print(f"  {dr['impact']:>16}  {dr['factor']}")
+            print(f"  {_driver_icon(dr['impact'])} {dr['impact']:>16}  {dr['factor']}")
     if d.get("suggestions"):
         _hr("Suggestions to improve")
         for s in d["suggestions"]:

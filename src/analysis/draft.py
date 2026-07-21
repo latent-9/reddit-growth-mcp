@@ -181,6 +181,13 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str], patte
     band = (
         "viral" if performance >= 90 else "strong" if performance >= 70 else "average" if performance >= 40 else "weak"
     )
+    # Guard against collapsed distributions: on a mostly-removed sub the whole
+    # sample sits near zero, so a top-percentile score can still be ~1 upvote.
+    # A projection that small is weak in absolute terms, whatever its percentile
+    # — don't let it read as viral/strong.
+    if projected < 5:
+        performance = min(performance, 35)
+        band = "weak"
 
     return {
         "performance_score": performance,

@@ -62,6 +62,20 @@ def test_predict_degrades_without_patterns():
     assert "performance_score" in res
 
 
+def test_degenerate_distribution_not_labeled_viral():
+    # A mostly-removed sub: the whole score distribution sits near zero, so a
+    # top-percentile score is still ~1 upvote. That must not read as viral.
+    dead = {
+        "score_stats": {"mean": 1, "median": 1, "max": 2},
+        "score_percentiles": {25: 0, 50: 1, 75: 1, 90: 1, 95: 2},
+        "score_by_media_type": [{"value": "text", "median": 1, "mean": 1, "count": 10}],
+    }
+    res = _predict_performance("check out my thing", "text", None, patterns=dead)
+    assert res["projected_score"] < 5
+    assert res["performance_band"] == "weak"
+    assert res["performance_score"] <= 35
+
+
 def test_compliance_flags_missing_required_flair():
     acceptance = {"post_requirements": {"flair_required": True}, "account_gates": []}
     out = _check_compliance("title", "", "text", None, acceptance)

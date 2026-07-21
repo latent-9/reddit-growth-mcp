@@ -17,6 +17,9 @@ semantic versioning.
   draft is missing to match what goes viral in the sub.
 
 ### Added
+- Draft CLI output shows at-a-glance red/amber/green indicators: a light on the
+  acceptance verdict and removal rate, a candle (📈/➖/📉) on the performance
+  band, and per-driver 🟢/🔴 for score boosts vs drags.
 - `evaluate_draft_across` (`fit`): score one draft across subreddits and rank by
   size-normalized fit (percentile within each sub) versus raw reach, so subs of
   different sizes compare fairly.
@@ -56,6 +59,10 @@ semantic versioning.
   low-confidence samples; an accurate live diff runs when credentials exist.
 
 ### Fixed
+- `evaluate_draft` no longer labels a draft "viral" on a collapsed
+  distribution: on a mostly-removed sub where a top-percentile score is still
+  ~1 upvote, the band is capped to "weak" so the projected reach and the band
+  agree.
 - `evaluate_draft` verdict now folds in the sub's base removal rate: a fully
   compliant draft in a subreddit that removes most of what it gets is flagged
   `risky` (or `likely_removed` alongside warnings) instead of `likely_accepted`.
