@@ -184,15 +184,15 @@ while true; do
   show_header
   choose_mode
   case "$choice" in
-    1|plan)       banner "plan — where to post · tags · content · timing"; choose_subs; [ -n "${SUBS:-}" ] && { run plan $SUBS --tz "$TZ_OFFSET"; pause; } ;;
+    1|plan)       banner "plan — where to post · tags · content · timing"; choose_subs; [ -n "${SUBS:-}" ] && { choose_window; run plan $SUBS --tz "$TZ_OFFSET" --time "$WIN"; pause; } ;;
     2|compare)    banner "compare — rank subreddits by growth potential"; choose_subs; [ -n "${SUBS:-}" ] && { run compare $SUBS; pause; } ;;
     3|patterns)   banner "patterns — the viral recipe for one sub"; choose_one; [ -n "${SUB:-}" ] && { choose_window; run patterns "$SUB" --time "$WIN"; pause; } ;;
-    4|draft)      banner "draft — score one post before you submit"; choose_one; [ -n "${SUB:-}" ] && { ask_title; run draft "$SUB" --title "$TITLE" --type "$TYPE"; pause; } ;;
-    5|fit)        banner "fit — score one draft across several subs"; choose_subs; [ -n "${SUBS:-}" ] && { ask_title; run fit $SUBS --title "$TITLE" --type "$TYPE"; pause; } ;;
+    4|draft)      banner "draft — score one post before you submit"; choose_one; [ -n "${SUB:-}" ] && { ask_title; choose_window; run draft "$SUB" --title "$TITLE" --type "$TYPE" --time "$WIN"; pause; } ;;
+    5|fit)        banner "fit — score one draft across several subs"; choose_subs; [ -n "${SUBS:-}" ] && { ask_title; choose_window; run fit $SUBS --title "$TITLE" --type "$TYPE" --time "$WIN"; pause; } ;;
     6|traffic)    banner "traffic — how active is a sub"; choose_one; [ -n "${SUB:-}" ] && { run traffic "$SUB"; pause; } ;;
     7|insight)    banner "insight — discussion depth + sentiment"; choose_one; [ -n "${SUB:-}" ] && { run insight "$SUB"; pause; } ;;
     8|acceptance) banner "acceptance — removal rate + what gets removed"; choose_one; [ -n "${SUB:-}" ] && { run acceptance "$SUB"; pause; } ;;
-    9|report)     banner "report — acceptance + patterns together"; choose_one; [ -n "${SUB:-}" ] && { run report "$SUB"; pause; } ;;
+    9|report)     banner "report — acceptance + patterns together"; choose_one; [ -n "${SUB:-}" ] && { choose_window; run report "$SUB" --time "$WIN"; pause; } ;;
     h|H|help)     help_screen ;;
     q|Q|quit)     cls; printf "  ${D}bye 👋${R}\n"; exit 0 ;;
     "") ;;

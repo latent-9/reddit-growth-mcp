@@ -405,7 +405,7 @@ def _plan_markdown(plan: dict, tz: float) -> str:
 
 def _run_plan(args, reddit) -> None:
     """Growth planner: rank subs, pick the safest strong one, print its recipe."""
-    plan = build_growth_plan(args.subreddits, reddit, args.window)
+    plan = build_growth_plan(args.subreddits, reddit, args.window, time_filter=args.time)
     if "error" in plan:
         print("Could not build a plan:", plan["error"])
         return
@@ -528,6 +528,7 @@ def main(argv=None) -> int:
     spl = sub.add_parser("plan", help="Growth plan: best safe target, cross-posts, recipe, timing")
     spl.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
     spl.add_argument("--window", default="30d", help="Archive lookback (default: 30d)")
+    spl.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Recipe window (default: month)")
     spl.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
     spl.add_argument("--md", action="store_true", help="Output the plan as Markdown (for saving/sharing)")
 
@@ -537,6 +538,7 @@ def main(argv=None) -> int:
     sd.add_argument("--body", default="", help="Draft self-text body (optional)")
     sd.add_argument("--type", default="text", dest="post_type", help="text | image | video | link (default: text)")
     sd.add_argument("--flair", default=None, help="Intended flair (optional)")
+    sd.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Pattern window (default: month)")
     sd.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
 
     sf = sub.add_parser("fit", help="Score one draft across subs, ranked by size-fair fit")
@@ -544,6 +546,7 @@ def main(argv=None) -> int:
     sf.add_argument("--title", required=True, help="Draft post title")
     sf.add_argument("--type", default="text", dest="post_type", help="text | image | video | link (default: text)")
     sf.add_argument("--flair", default=None, help="Intended flair (optional)")
+    sf.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Pattern window (default: month)")
 
     args = p.parse_args(argv)
     reddit = _get_reddit()
@@ -564,7 +567,7 @@ def main(argv=None) -> int:
         result = compare_subreddits(args.subreddits, args.window, args.sample, args.rank_by)
         printer = _print_compare
     elif args.cmd == "draft":
-        result = evaluate_draft(args.subreddit, args.title, reddit, args.body, args.post_type, args.flair)
+        result = evaluate_draft(args.subreddit, args.title, reddit, args.body, args.post_type, args.flair, args.time)
         printer = _print_draft
     elif args.cmd == "traffic":
         result = estimate_activity_archive(args.subreddit, args.window)
@@ -573,7 +576,7 @@ def main(argv=None) -> int:
         result = analyze_insight(args.subreddit, args.after)
         printer = _print_insight
     elif args.cmd == "fit":
-        result = evaluate_draft_across(args.subreddits, args.title, reddit, "", args.post_type, args.flair)
+        result = evaluate_draft_across(args.subreddits, args.title, reddit, "", args.post_type, args.flair, args.time)
         printer = _print_fit
     elif args.cmd == "plan":
         _run_plan(args, reddit)
