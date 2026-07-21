@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Reddit Growth MCP" width="128" height="128" />
+  <img src="assets/banner.png" alt="Reddit Growth MCP" width="480" />
 </p>
 
 <h1 align="center">Reddit Growth MCP</h1>
