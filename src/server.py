@@ -81,7 +81,9 @@ def initialize_reddit_client():
 try:
     initialize_reddit_client()
 except Exception as e:  # allow the server to boot without creds for inspection
-    print(f"WARNING: Reddit client init failed: {e}", flush=True)
+    # stderr only: on stdio transport stdout carries the JSON-RPC protocol, so
+    # any plain text there corrupts the handshake (and fails Glama introspection).
+    print(f"WARNING: Reddit client init failed: {e}", file=sys.stderr, flush=True)
 
 
 # ── Analysis tools ────────────────────────────────────────────────────────
@@ -349,14 +351,19 @@ and the draft's predicted score. Be honest that figures are estimates.
 
 
 def main():
-    """Entry point — runs over stdio transport."""
-    print("Reddit Growth MCP starting...", flush=True)
+    """Entry point — runs over stdio transport.
+
+    All startup logging goes to stderr: on stdio transport stdout is the
+    JSON-RPC channel, so a stray banner there would break the client handshake
+    and Glama's introspection check.
+    """
+    print("Reddit Growth MCP starting...", file=sys.stderr, flush=True)
     try:
         initialize_reddit_client()
-        print("Reddit client ready.", flush=True)
+        print("Reddit client ready.", file=sys.stderr, flush=True)
     except Exception as e:
-        print(f"WARNING: Reddit client unavailable: {e}", flush=True)
-        print("Set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env", flush=True)
+        print(f"WARNING: Reddit client unavailable: {e}", file=sys.stderr, flush=True)
+        print("Set REDDIT_CLIENT_ID / REDDIT_CLIENT_SECRET in .env", file=sys.stderr, flush=True)
     mcp.run()
 
 

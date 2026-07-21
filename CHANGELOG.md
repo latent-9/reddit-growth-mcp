@@ -17,6 +17,8 @@ semantic versioning.
   draft is missing to match what goes viral in the sub.
 
 ### Added
+- Dockerfile and `.dockerignore` so the MCP server runs as a container on any
+  host (and passes Glama's start-and-introspect listing check).
 - Draft CLI output shows at-a-glance red/amber/green indicators: a light on the
   acceptance verdict and removal rate, a candle (📈/➖/📉) on the performance
   band, and per-driver 🟢/🔴 for score boosts vs drags.
@@ -59,6 +61,9 @@ semantic versioning.
   low-confidence samples; an accurate live diff runs when credentials exist.
 
 ### Fixed
+- Startup logging now goes to stderr. On stdio transport stdout carries the
+  JSON-RPC protocol, so the previous stdout banners could corrupt the client
+  handshake and fail automated introspection (e.g. Glama's listing check).
 - `evaluate_draft` no longer labels a draft "viral" on a collapsed
   distribution: on a mostly-removed sub where a top-percentile score is still
   ~1 upvote, the band is capped to "weak" so the projected reach and the band

@@ -1,0 +1,16 @@
+# Keep the build context small — none of this is needed to run the server.
+.git
+.github
+.venv
+.pytest_cache
+.ruff_cache
+dist
+build
+**/__pycache__
+*.pyc
+tests
+scripts
+ai-docs
+.env
+.env.*
+!.env.sample
