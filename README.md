@@ -82,6 +82,24 @@ one window, looping until you quit. Type `h` in the menu for a built-in guide.
 - What actually performs here: which format, title style, timing, and flair?
 - Given a specific draft, how is it likely to do, and how do I improve it?
 
+## Demo
+
+The interactive launcher (`bash scripts/menu.sh`) — pick a mode, choose
+subreddits by number, and it runs the analysis for you:
+
+**`plan` — where to post, the tags and content to use, and when**
+
+![plan mode](assets/plan-mode.png)
+
+**`compare` — rank candidate subreddits by growth potential**
+
+![compare mode](assets/compare-mode.png)
+
+**`patterns` — the full viral recipe for a subreddit**
+
+![patterns mode](assets/patterns-mode.png)
+![patterns recipe](assets/patterns-mode-2.png)
+
 ## Tools
 
 | Tool | Purpose | Needs credentials |
