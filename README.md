@@ -75,9 +75,11 @@ Prefer a menu to flags? Run:
 bash scripts/menu.sh
 ```
 
-Pick a mode (plan, compare, patterns, draft, …), choose subreddits by number
-from a preset list (or type your own), and it runs the command for you — all in
-one window, looping until you quit. Type `h` in the menu for a built-in guide.
+Pick a mode (plan, compare, patterns, draft, …), choose subreddits from a
+searchable preset list, and it runs the command for you — all in one window.
+With [gum](https://github.com/charmbracelet/gum) installed you get an arrow-key
+TUI with fuzzy search; otherwise it falls back to a numbered menu. Type `h` for
+a built-in guide.
 
 ## What it answers
 
@@ -88,10 +90,7 @@ one window, looping until you quit. Type `h` in the menu for a built-in guide.
 
 ## Demo
 
-The interactive launcher (`bash scripts/menu.sh`) — pick a mode, choose
-subreddits, and it runs the analysis for you:
-
-**`compare` — rank candidate subreddits by growth potential**
+`compare` ranks candidate subreddits by growth, viral ceiling, and removal risk:
 
 ![compare mode](assets/demo-compare.png)
 
@@ -110,9 +109,9 @@ subreddits, and it runs the analysis for you:
 | `find_target_subreddits_tool` | Discover and rank subreddits for topics by estimated traffic | Yes |
 | `fetch_posts`, `fetch_multiple`, `search_subreddit`, `fetch_comments` | Raw data access | Yes |
 
-The analysis tools are subreddit-agnostic. They have been exercised on
-communities such as `Fedora`, `gnome`, `linux`, `commandline`, `mcp`,
-`LocalLLaMA`, and `ClaudeAI`.
+The analysis tools are subreddit-agnostic — they work on any archived sub. The
+launcher ships 40+ presets across AI, dev, and startup communities (`ChatGPT`,
+`DeepSeek`, `LocalLLaMA`, `StableDiffusion`, `SaaS`, `indiehackers`, …).
 
 ## Data sources
 
@@ -126,25 +125,19 @@ credentials are available, `analyze_acceptance` performs an accurate live diff
 (archive vs. current Reddit) to resolve ambiguous cases; without credentials it
 runs archive-only and flags its confidence.
 
-## Installation
+## Reddit credentials (optional)
 
-```bash
-uv sync
-```
-
-Reddit credentials are optional. They unlock the credential-only tools and the
-accurate live removal check. Create a "script" application at
+Everything above works with no account. Credentials only unlock the
+credential-only tools (raw data access, `find_target_subreddits`) and the
+accurate live-removal check. Create a "script" app at
 https://www.reddit.com/prefs/apps, then:
 
 ```bash
 cp .env.sample .env
 # REDDIT_CLIENT_ID=...
 # REDDIT_CLIENT_SECRET=...
-# REDDIT_USER_AGENT=reddit-growth-mcp/0.1 by u/your_username
+# REDDIT_USER_AGENT=reddit-growth-mcp/0.2 by u/your_username
 ```
-
-Without credentials, the pattern, acceptance, comparison, and draft tools still
-work via the archive.
 
 ## Command-line usage
 
@@ -170,6 +163,9 @@ expected reach, so a small sub where the post lands in the top decile isn't
 buried by a big sub's larger absolute numbers.
 
 Add `--json` to any command for raw output.
+
+Time-based commands (`patterns`, `plan`, `draft`, `fit`, `report`) accept
+`--time day|week|month|year|all` — shorter is fresher but a smaller sample.
 
 `patterns` accepts `--metric`:
 
