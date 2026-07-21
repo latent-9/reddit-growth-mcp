@@ -89,20 +89,15 @@ one window, looping until you quit. Type `h` in the menu for a built-in guide.
 ## Demo
 
 The interactive launcher (`bash scripts/menu.sh`) — pick a mode, choose
-subreddits by number, and it runs the analysis for you:
+subreddits, and it runs the analysis for you:
 
 **`plan` — where to post, the tags and content to use, and when**
 
-![plan mode](assets/plan-mode.png)
+![plan mode](assets/demo-plan.png)
 
 **`compare` — rank candidate subreddits by growth potential**
 
-![compare mode](assets/compare-mode.png)
-
-**`patterns` — the full viral recipe for a subreddit**
-
-![patterns mode](assets/patterns-mode.png)
-![patterns recipe](assets/patterns-mode-2.png)
+![compare mode](assets/demo-compare.png)
 
 ## Tools
 
