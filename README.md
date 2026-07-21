@@ -355,3 +355,5 @@ CLI is `src/cli.py`.
 ## License
 
 MIT
+
+<sub>mcp-name: io.github.latent-9/reddit-growth-mcp</sub>
