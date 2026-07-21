@@ -17,10 +17,10 @@ run()  { printf "\n${D}\$ ${R}${T}reddit-growth %s${R}\n${D}   …fetching from 
 pause(){ printf "\n${D}──  press enter to return to the menu  ──${R}"; read -r _; }
 
 logo() {
-  printf "${O}       .---.${R}\n"
-  printf "${O}      ( o o )${R}   ${C}${T}reddit-growth${R}\n"
-  printf "${O}       \\\\ v /${R}    ${D}grow where you'll be seen${R}\n"
-  printf "${O}        '-'${R}\n"
+  printf "\n"
+  printf "   ${O}${T}reddit${R}${D}·${R}${G}${T}growth${R}   ${G}▁▂▃▄▅▇${R}${O}↗${R}\n"
+  printf "   ${D}────────────────────────────────────${R}\n"
+  printf "   ${D}find the sub that grows you — and what to post${R}\n"
 }
 
 # Preset subreddits (all verified to have archive data). Numbered for quick pick.
