@@ -1,4 +1,8 @@
-# Reddit Growth MCP
+<p align="center">
+  <img src="assets/logo.png" alt="Reddit Growth MCP" width="128" height="128" />
+</p>
+
+<h1 align="center">Reddit Growth MCP</h1>
 
 [![PyPI](https://img.shields.io/pypi/v/reddit-growth-mcp)](https://pypi.org/project/reddit-growth-mcp/)
 [![CI](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml)

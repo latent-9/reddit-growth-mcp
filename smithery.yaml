@@ -1,0 +1,28 @@
+# Smithery configuration — https://smithery.ai/docs
+# The server runs over stdio and is published to PyPI, so uvx fetches and runs
+# it with no separate install step. Reddit credentials are optional.
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      redditClientId:
+        type: string
+        title: Reddit client ID
+        description: >-
+          Optional. Unlocks official rule checks and live removal diffs. Omit to
+          run credential-free from the public Arctic Shift archive.
+      redditClientSecret:
+        type: string
+        title: Reddit client secret
+        description: Optional. Paired with the client ID.
+    required: []
+  commandFunction: |-
+    (config) => ({
+      command: 'uvx',
+      args: ['reddit-growth-mcp'],
+      env: {
+        ...(config.redditClientId ? { REDDIT_CLIENT_ID: config.redditClientId } : {}),
+        ...(config.redditClientSecret ? { REDDIT_CLIENT_SECRET: config.redditClientSecret } : {})
+      }
+    })
