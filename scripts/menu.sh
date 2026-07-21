@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
-# Interactive launcher — pick a mode, type the subreddits, see the result.
-# One window, menu-driven; loops until you quit.
+# Interactive launcher — pick a mode, choose subreddits, see the result.
+# Uses `gum` for a modern TUI when available; falls back to a numbered menu.
 set -uo pipefail
 cd "$(dirname "$0")/.."
 
 PY="python -m src.cli"
 TZ_OFFSET="${RG_TZ:-7}"   # local-time offset for plan/draft (override with RG_TZ)
+HAS_GUM=0; command -v gum >/dev/null 2>&1 && HAS_GUM=1
 
 T='\033[1m'; D='\033[38;5;245m'; G='\033[38;5;40m'; Y='\033[38;5;220m'
 C='\033[38;5;44m'; O='\033[38;5;208m'; R='\033[0m'
+GO=208; GC=42; GD=245; GY=220   # gum color codes
 
 cls()  { command clear 2>/dev/null || printf '\033[H\033[2J'; }
 line() { printf "${D}────────────────────────────────────────────────────────${R}\n"; }
@@ -16,14 +18,7 @@ banner(){ printf "\n${G}${T}▶ %s${R}\n\n" "$1"; }
 run()  { printf "\n${D}\$ ${R}${T}reddit-growth %s${R}\n${D}   …fetching from the archive (a few seconds)…${R}\n\n" "$*"; $PY "$@"; }
 pause(){ printf "\n${D}──  press enter to return to the menu  ──${R}"; read -r _; }
 
-logo() {
-  printf "\n"
-  printf "   ${O}${T}reddit${R}${D}·${R}${G}${T}growth${R}   ${G}▁▂▃▄▅▇${R}${O}↗${R}\n"
-  printf "   ${D}────────────────────────────────────${R}\n"
-  printf "   ${D}Ready to grow? Pick a mode and find where you'll be seen ${R}${G}↓${R}\n"
-}
-
-# Preset subreddits (all verified to have archive data). Numbered for quick pick.
+# All verified to have archive data.
 SUBS_OPTS=(ChatGPT OpenAI ClaudeAI grok DeepSeek Bard perplexity_ai MistralAI \
            LocalLLaMA ollama mcp cursor LLMDevs PromptEngineering \
            singularity artificial Futurology aiwars MachineLearning \
@@ -32,7 +27,84 @@ SUBS_OPTS=(ChatGPT OpenAI ClaudeAI grok DeepSeek Bard perplexity_ai MistralAI \
            selfhosted homelab buildapc technology \
            SaaS SideProject startups indiehackers Entrepreneur marketing SEO growthhacking)
 
-# Show the pick-list, read numbers (or typed names), resolve into SEL.
+logo_ansi() {
+  printf "\n"
+  printf "   ${O}${T}reddit${R}${D}·${R}${G}${T}growth${R}   ${G}▁▂▃▄▅▇${R}${O}↗${R}\n"
+  printf "   ${D}────────────────────────────────────${R}\n"
+  printf "   ${D}Ready to grow? Pick a mode and find where you'll be seen ${R}${G}↓${R}\n"
+}
+
+show_header() {
+  cls
+  if [ "$HAS_GUM" = 1 ]; then
+    gum style --border rounded --border-foreground "$GO" --foreground "$GO" --bold \
+      --padding "0 3" --margin "1 0 0 1" "reddit·growth   ▁▂▃▄▅▇↗"
+    gum style --foreground "$GD" --faint --margin "0 0 1 2" \
+      "Ready to grow? Pick a mode — find where you'll be seen ↓"
+  else
+    logo_ansi; line
+  fi
+}
+
+# ---- selection helpers (gum when available, numbered fallback otherwise) ----
+MODES=(
+  "plan|where to post + tags + content + when"
+  "compare|rank subs by growth / viral / safety"
+  "patterns|deep analysis: the viral recipe"
+  "draft|score ONE post before you submit"
+  "fit|score one draft across several subs"
+  "traffic|activity (posts/day)"
+  "insight|discussion depth + sentiment"
+  "acceptance|removal rate + what gets removed"
+  "report|acceptance + patterns together"
+  "help|what to type"
+  "quit|"
+)
+
+choose_mode() {
+  if [ "$HAS_GUM" = 1 ]; then
+    local opts=() m
+    for m in "${MODES[@]}"; do opts+=("$(printf '%-11s %s' "${m%%|*}" "${m#*|}")"); done
+    local sel
+    sel=$(printf '%s\n' "${opts[@]}" | gum choose --height 13 \
+      --header "  what do you want to do?" --cursor "❯ ") || { choice=quit; return; }
+    choice=$(printf '%s' "$sel" | awk '{print $1}')
+  else
+    numbered_menu; read -r choice
+  fi
+}
+
+# gum filter = fuzzy-searchable list. --no-limit for multi-select.
+choose_subs() {
+  if [ "$HAS_GUM" = 1 ]; then
+    SUBS=$(printf '%s\n' "${SUBS_OPTS[@]}" | gum filter --no-limit --height 15 \
+      --placeholder "type to filter · tab=select · enter=confirm" \
+      --header "  pick subreddit(s)" --indicator "▸" | tr '\n' ' ')
+  else
+    pick; SUBS="$SEL"
+  fi
+}
+choose_one() {
+  if [ "$HAS_GUM" = 1 ]; then
+    SUB=$(printf '%s\n' "${SUBS_OPTS[@]}" | gum filter --height 15 \
+      --placeholder "type to filter…" --header "  pick a subreddit")
+  else
+    pick; SUB="${SEL%% *}"
+  fi
+}
+ask_title() {
+  if [ "$HAS_GUM" = 1 ]; then
+    TITLE=$(gum input --width 90 --header "  post title" \
+      --placeholder "I mapped 10 years of GPU prices [OC]")
+    TYPE=$(gum choose --header "  post type" image text video link)
+  else
+    printf "${Y}  post title${R} ${D}— e.g.  I mapped 10 years of GPU prices [OC]${R}\n${Y}  ▸ ${R}"; read -r TITLE
+    printf "${Y}  post type${R} ${D}— text / image / video / link (default image)${R}\n${Y}  ▸ ${R}"; read -r TYPE; TYPE="${TYPE:-image}"
+  fi
+  TYPE="${TYPE:-image}"
+}
+
+# ---- numbered fallback (no gum) ----
 pick() {
   printf "${D}  pick number(s) — e.g.  ${R}1 4 5${D}  — or just type subreddit name(s):${R}\n\n"
   printf "  ${C}AI chat${R}     ${G}1${R} ChatGPT  ${G}2${R} OpenAI  ${G}3${R} ClaudeAI  ${G}4${R} grok  ${G}5${R} DeepSeek  ${G}6${R} Bard  ${G}7${R} perplexity_ai  ${G}8${R} MistralAI\n"
@@ -54,44 +126,8 @@ pick() {
   SEL="${SEL# }"
 }
 
-askS() { pick; SUBS="$SEL"; }
-ask1() { pick; SUB="${SEL%% *}"; }   # single-sub modes take the first pick
-askT() {
-  printf "${Y}  post title${R} ${D}— e.g.  I mapped 10 years of GPU prices [OC]${R}\n${Y}  ▸ ${R}"; read -r TITLE
-  printf "${Y}  post type${R} ${D}— text / image / video / link  (default: image)${R}\n${Y}  ▸ ${R}"; read -r TYPE; TYPE="${TYPE:-image}"
-}
-
-help_screen() {
-  cls
-  logo
-  line
-  printf "  ${T}HOW TO USE${R} ${D}— after picking a mode, choose subreddits by number${R}\n"
-  printf "  ${D}from the list (e.g. “1 10”) or type names. No Reddit account needed.${R}\n\n"
-
-  printf "  ${T}“Where should I post to grow my account?”${R}\n"
-  printf "    ${G}1 plan${R}     ${D}type:${R} StableDiffusion dataisbeautiful comfyui\n"
-  printf "    ${G}2 compare${R}  ${D}type:${R} StableDiffusion dataisbeautiful\n\n"
-
-  printf "  ${T}“What kind of post works in a sub?”${R}\n"
-  printf "    ${G}3 patterns${R} ${D}type:${R} dataisbeautiful\n\n"
-
-  printf "  ${T}“Will MY post do well / get removed?”${R}\n"
-  printf "    ${G}4 draft${R}    ${D}type:${R} dataisbeautiful  ${D}then a title + post type${R}\n"
-  printf "    ${G}5 fit${R}      ${D}type:${R} several subs  ${D}then a title (finds best-fit sub)${R}\n\n"
-
-  printf "  ${T}“How active / strict / deep is a sub?”${R}\n"
-  printf "    ${G}6 traffic${R}    ${D}·${R} ${G}8 acceptance${R} ${D}·${R} ${G}7 insight${R} ${D}·${R} ${G}9 report${R}  ${D}type:${R} dataisbeautiful\n\n"
-
-  line
-  printf "  ${D}tips:  exact sub name (no r/)  ·  multiple = separate with spaces${R}\n"
-  printf "  ${D}       no data? that sub isn't archived — try a bigger/related one${R}\n"
-  pause
-}
-
-menu() {
-  cls
-  logo
-  line
+numbered_menu() {
+  cls; logo_ansi; line
   printf "  ${G}1${R}  ${T}plan${R}        ${D}where to post + tags + content + when${R}\n"
   printf "  ${G}2${R}  ${T}compare${R}     ${D}rank subs by growth / viral / safety${R}\n"
   printf "  ${G}3${R}  ${T}patterns${R}    ${D}deep analysis: the viral recipe${R}\n"
@@ -106,22 +142,35 @@ menu() {
   printf "  ${T}choose ▸ ${R}"
 }
 
+help_screen() {
+  cls; logo_ansi; line
+  printf "  ${T}HOW TO USE${R} ${D}— pick a mode, then choose subreddits (type to filter${R}\n"
+  printf "  ${D}with gum, or by number). No Reddit account needed.${R}\n\n"
+  printf "  ${T}“Where should I post to grow my account?”${R}  ${G}plan${R} ${D}·${R} ${G}compare${R}\n"
+  printf "  ${T}“What kind of post works in a sub?”${R}        ${G}patterns${R}\n"
+  printf "  ${T}“Will MY post do well / get removed?”${R}       ${G}draft${R} ${D}·${R} ${G}fit${R}\n"
+  printf "  ${T}“How active / strict / deep is a sub?”${R}      ${G}traffic${R} ${D}·${R} ${G}acceptance${R} ${D}·${R} ${G}insight${R} ${D}·${R} ${G}report${R}\n\n"
+  line
+  printf "  ${D}tip: exact sub name (no r/) · pick several for plan/compare/fit${R}\n"
+  pause
+}
+
 while true; do
-  menu
-  read -r choice
+  show_header
+  choose_mode
   case "$choice" in
-    1) banner "plan — where to post · tags · content · timing"; askS; [ -n "${SUBS:-}" ] && { run plan $SUBS --tz "$TZ_OFFSET"; pause; } ;;
-    2) banner "compare — rank subreddits by growth potential"; askS; [ -n "${SUBS:-}" ] && { run compare $SUBS; pause; } ;;
-    3) banner "patterns — the viral recipe for one sub"; ask1; [ -n "${SUB:-}" ] && { run patterns "$SUB" --time month; pause; } ;;
-    4) banner "draft — score one post before you submit"; ask1; [ -n "${SUB:-}" ] && { askT; run draft "$SUB" --title "$TITLE" --type "$TYPE"; pause; } ;;
-    5) banner "fit — score one draft across several subs"; askS; [ -n "${SUBS:-}" ] && { askT; run fit $SUBS --title "$TITLE" --type "$TYPE"; pause; } ;;
-    6) banner "traffic — how active is a sub"; ask1; [ -n "${SUB:-}" ] && { run traffic "$SUB"; pause; } ;;
-    7) banner "insight — discussion depth + sentiment"; ask1; [ -n "${SUB:-}" ] && { run insight "$SUB"; pause; } ;;
-    8) banner "acceptance — removal rate + what gets removed"; ask1; [ -n "${SUB:-}" ] && { run acceptance "$SUB"; pause; } ;;
-    9) banner "report — acceptance + patterns together"; ask1; [ -n "${SUB:-}" ] && { run report "$SUB"; pause; } ;;
-    h|H|help|\?) help_screen ;;
-    q|Q) cls; printf "  ${D}bye 👋${R}\n"; exit 0 ;;
+    1|plan)       banner "plan — where to post · tags · content · timing"; choose_subs; [ -n "${SUBS:-}" ] && { run plan $SUBS --tz "$TZ_OFFSET"; pause; } ;;
+    2|compare)    banner "compare — rank subreddits by growth potential"; choose_subs; [ -n "${SUBS:-}" ] && { run compare $SUBS; pause; } ;;
+    3|patterns)   banner "patterns — the viral recipe for one sub"; choose_one; [ -n "${SUB:-}" ] && { run patterns "$SUB" --time month; pause; } ;;
+    4|draft)      banner "draft — score one post before you submit"; choose_one; [ -n "${SUB:-}" ] && { ask_title; run draft "$SUB" --title "$TITLE" --type "$TYPE"; pause; } ;;
+    5|fit)        banner "fit — score one draft across several subs"; choose_subs; [ -n "${SUBS:-}" ] && { ask_title; run fit $SUBS --title "$TITLE" --type "$TYPE"; pause; } ;;
+    6|traffic)    banner "traffic — how active is a sub"; choose_one; [ -n "${SUB:-}" ] && { run traffic "$SUB"; pause; } ;;
+    7|insight)    banner "insight — discussion depth + sentiment"; choose_one; [ -n "${SUB:-}" ] && { run insight "$SUB"; pause; } ;;
+    8|acceptance) banner "acceptance — removal rate + what gets removed"; choose_one; [ -n "${SUB:-}" ] && { run acceptance "$SUB"; pause; } ;;
+    9|report)     banner "report — acceptance + patterns together"; choose_one; [ -n "${SUB:-}" ] && { run report "$SUB"; pause; } ;;
+    h|H|help)     help_screen ;;
+    q|Q|quit)     cls; printf "  ${D}bye 👋${R}\n"; exit 0 ;;
     "") ;;
-    *) printf "\n  ${Y}“%s” isn't a mode — pick 1-9, h for help, or q.${R}" "$choice"; sleep 1.3 ;;
+    *) printf "\n  ${Y}“%s” isn't a mode — pick from the list, or h for help.${R}" "$choice"; sleep 1.2 ;;
   esac
 done
