@@ -206,6 +206,20 @@ Register the server once (Claude Code shown):
 claude mcp add reddit-growth-mcp -- uvx reddit-growth-mcp
 ```
 
+For Cline, Cursor, Claude Desktop, and other clients, add it to the MCP
+settings JSON (no separate install — `uvx` fetches it from PyPI):
+
+```json
+{
+  "mcpServers": {
+    "reddit-growth": {
+      "command": "uvx",
+      "args": ["reddit-growth-mcp"]
+    }
+  }
+}
+```
+
 Then ask in natural language, for example "analyze what performs in r/Fedora"
 or "will this title get accepted in r/linux?" The client calls the tools.
 
