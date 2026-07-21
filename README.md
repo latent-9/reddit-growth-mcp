@@ -17,7 +17,7 @@ and as a standalone command-line tool. Most analysis works without any Reddit
 API credentials, because it reads from a public historical archive.
 
 <p align="center">
-  <img src="assets/demo.gif" alt="reddit-growth in action" width="720" />
+  <img src="assets/demo-plan.png" alt="reddit-growth in action" width="760" />
 </p>
 
 One command turns a list of subreddits into a plan — where to post, what to
@@ -90,10 +90,6 @@ one window, looping until you quit. Type `h` in the menu for a built-in guide.
 
 The interactive launcher (`bash scripts/menu.sh`) — pick a mode, choose
 subreddits, and it runs the analysis for you:
-
-**`plan` — where to post, the tags and content to use, and when**
-
-![plan mode](assets/demo-plan.png)
 
 **`compare` — rank candidate subreddits by growth potential**
 
