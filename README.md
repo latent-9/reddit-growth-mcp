@@ -16,6 +16,10 @@ It runs as an MCP server (for use inside Claude, Cursor, and other MCP clients)
 and as a standalone command-line tool. Most analysis works without any Reddit
 API credentials, because it reads from a public historical archive.
 
+<p align="center">
+  <img src="assets/demo.gif" alt="reddit-growth in action" width="720" />
+</p>
+
 One command turns a list of subreddits into a plan — where to post, what to
 post, and when:
 
