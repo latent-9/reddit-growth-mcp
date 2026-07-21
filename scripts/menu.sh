@@ -107,6 +107,28 @@ ask_title() {
   TYPE="${TYPE:-image}"
 }
 
+# Time window for patterns. Shorter = fresher but smaller sample / lower confidence.
+choose_window() {
+  WIN=month
+  if [ "$HAS_GUM" = 1 ]; then
+    local sel
+    sel=$(gum choose --height 7 --cursor "❯ " \
+      --header "  time window   (shorter = fresher · smaller sample)" \
+      "today       · freshest, low confidence" \
+      "this week   · fresh, still reliable" \
+      "this month  · default, balanced" \
+      "this year   · lots of data" \
+      "all time    · everything") || return
+    case "$sel" in
+      today*) WIN=day ;; "this week"*) WIN=week ;; "this month"*) WIN=month ;;
+      "this year"*) WIN=year ;; "all time"*) WIN=all ;;
+    esac
+  else
+    printf "${Y}  time window${R} ${D}— day / week / month / year / all  (default: month)${R}\n${Y}  ▸ ${R}"
+    read -r WIN; WIN="${WIN:-month}"
+  fi
+}
+
 # ---- numbered fallback (no gum) ----
 pick() {
   printf "${D}  pick number(s) — e.g.  ${R}1 4 5${D}  — or just type subreddit name(s):${R}\n\n"
@@ -164,7 +186,7 @@ while true; do
   case "$choice" in
     1|plan)       banner "plan — where to post · tags · content · timing"; choose_subs; [ -n "${SUBS:-}" ] && { run plan $SUBS --tz "$TZ_OFFSET"; pause; } ;;
     2|compare)    banner "compare — rank subreddits by growth potential"; choose_subs; [ -n "${SUBS:-}" ] && { run compare $SUBS; pause; } ;;
-    3|patterns)   banner "patterns — the viral recipe for one sub"; choose_one; [ -n "${SUB:-}" ] && { run patterns "$SUB" --time month; pause; } ;;
+    3|patterns)   banner "patterns — the viral recipe for one sub"; choose_one; [ -n "${SUB:-}" ] && { choose_window; run patterns "$SUB" --time "$WIN"; pause; } ;;
     4|draft)      banner "draft — score one post before you submit"; choose_one; [ -n "${SUB:-}" ] && { ask_title; run draft "$SUB" --title "$TITLE" --type "$TYPE"; pause; } ;;
     5|fit)        banner "fit — score one draft across several subs"; choose_subs; [ -n "${SUBS:-}" ] && { ask_title; run fit $SUBS --title "$TITLE" --type "$TYPE"; pause; } ;;
     6|traffic)    banner "traffic — how active is a sub"; choose_one; [ -n "${SUB:-}" ] && { run traffic "$SUB"; pause; } ;;
