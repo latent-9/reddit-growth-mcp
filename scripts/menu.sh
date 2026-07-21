@@ -23,9 +23,31 @@ logo() {
   printf "${O}    /  '-'  \\\\${R}\n"
 }
 
-# Prompts show an example, then a clear "> " input line.
-askS() { printf "${Y}  subreddit(s)${R} ${D}— space-separated, e.g.  StableDiffusion dataisbeautiful${R}\n${Y}  ▸ ${R}"; read -r SUBS; }
-ask1() { printf "${Y}  subreddit${R} ${D}— e.g.  dataisbeautiful${R}\n${Y}  ▸ ${R}"; read -r SUB; }
+# Preset subreddits (all known to have archive data). Numbered for quick pick.
+SUBS_OPTS=(singularity LocalLLaMA mcp ClaudeAI OpenAI ChatGPT \
+           StableDiffusion comfyui MachineLearning dataisbeautiful \
+           programming rust golang webdev technology)
+
+# Show the pick-list, read numbers (or typed names), resolve into SEL.
+pick() {
+  printf "${D}  pick number(s) — e.g.  ${R}1 10${D}  — or just type subreddit name(s):${R}\n\n"
+  printf "  ${C}AI/LLMs${R}   ${G}1${R} singularity  ${G}2${R} LocalLLaMA  ${G}3${R} mcp  ${G}4${R} ClaudeAI  ${G}5${R} OpenAI  ${G}6${R} ChatGPT\n"
+  printf "  ${C}AI-image${R}  ${G}7${R} StableDiffusion  ${G}8${R} comfyui  ${G}9${R} MachineLearning  ${G}10${R} dataisbeautiful\n"
+  printf "  ${C}dev/etc${R}   ${G}11${R} programming  ${G}12${R} rust  ${G}13${R} golang  ${G}14${R} webdev  ${G}15${R} technology\n\n"
+  printf "${Y}  ▸ ${R}"; read -r raw
+  SEL=""
+  for tok in $raw; do
+    if [[ "$tok" =~ ^[0-9]+$ ]] && [ "$tok" -ge 1 ] && [ "$tok" -le "${#SUBS_OPTS[@]}" ]; then
+      SEL="$SEL ${SUBS_OPTS[$((tok - 1))]}"
+    else
+      SEL="$SEL $tok"
+    fi
+  done
+  SEL="${SEL# }"
+}
+
+askS() { pick; SUBS="$SEL"; }
+ask1() { pick; SUB="${SEL%% *}"; }   # single-sub modes take the first pick
 askT() {
   printf "${Y}  post title${R} ${D}— e.g.  I mapped 10 years of GPU prices [OC]${R}\n${Y}  ▸ ${R}"; read -r TITLE
   printf "${Y}  post type${R} ${D}— text / image / video / link  (default: image)${R}\n${Y}  ▸ ${R}"; read -r TYPE; TYPE="${TYPE:-image}"
@@ -35,8 +57,8 @@ help_screen() {
   cls
   logo
   line
-  printf "  ${T}HOW TO USE${R} ${D}— give it subreddit names (no “r/”). Most modes need${R}\n"
-  printf "  ${D}no Reddit account; data comes from the public archive.${R}\n\n"
+  printf "  ${T}HOW TO USE${R} ${D}— after picking a mode, choose subreddits by number${R}\n"
+  printf "  ${D}from the list (e.g. “1 10”) or type names. No Reddit account needed.${R}\n\n"
 
   printf "  ${T}“Where should I post to grow my account?”${R}\n"
   printf "    ${G}1 plan${R}     ${D}type:${R} StableDiffusion dataisbeautiful comfyui\n"
