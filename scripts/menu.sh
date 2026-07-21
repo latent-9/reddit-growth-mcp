@@ -36,7 +36,8 @@ SUBS_OPTS=(ChatGPT OpenAI ClaudeAI grok DeepSeek Bard perplexity_ai MistralAI \
            StableDiffusion midjourney comfyui dataisbeautiful \
            programming Python javascript rust webdev coolgithubprojects \
            selfhosted homelab buildapc technology \
-           SaaS SideProject startups indiehackers Entrepreneur marketing SEO growthhacking)
+           SaaS SideProject startups indiehackers Entrepreneur marketing SEO growthhacking \
+           InternetIsBeautiful)
 
 BANNER_FILE="$(dirname "$0")/banner.txt"
 logo_ansi() {
@@ -138,7 +139,7 @@ pick() {
   printf "  ${C}image/data${R}  ${G}20${R} StableDiffusion  ${G}21${R} midjourney  ${G}22${R} comfyui  ${G}23${R} dataisbeautiful\n"
   printf "  ${C}dev${R}         ${G}24${R} programming  ${G}25${R} Python  ${G}26${R} javascript  ${G}27${R} rust  ${G}28${R} webdev  ${G}29${R} coolgithubprojects\n"
   printf "  ${C}infra/hw${R}    ${G}30${R} selfhosted  ${G}31${R} homelab  ${G}32${R} buildapc  ${G}33${R} technology\n"
-  printf "  ${C}startup/biz${R} ${G}34${R} SaaS  ${G}35${R} SideProject  ${G}36${R} startups  ${G}37${R} indiehackers  ${G}38${R} Entrepreneur  ${G}39${R} marketing  ${G}40${R} SEO  ${G}41${R} growthhacking\n\n"
+  printf "  ${C}startup/biz${R} ${G}34${R} SaaS  ${G}35${R} SideProject  ${G}36${R} startups  ${G}37${R} indiehackers  ${G}38${R} Entrepreneur  ${G}39${R} marketing  ${G}40${R} SEO  ${G}41${R} growthhacking  ${G}42${R} InternetIsBeautiful\n\n"
   printf "${Y}  ▸ ${R}"; read -r raw
   SEL=""
   for tok in $raw; do
