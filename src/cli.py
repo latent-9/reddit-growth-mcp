@@ -171,7 +171,7 @@ def _print_patterns(d: dict, tz: float = 0.0) -> None:
         if rc["keywords"]:
             print(f"  Words : {', '.join(rc['keywords'][:6])}")
 
-    _hr("Top examples")
+    _hr("Top examples  (↑ upvotes · 💬 comments · ⚠cb = clickbait)")
     for ex in d["top_examples"][:5]:
         cbf = " ⚠cb" if ex.get("clickbait", 0) >= 0.4 else ""
         print(f"  ↑{ex['score']:<6} 💬{ex.get('num_comments', 0):<5}{cbf} [{ex['media_type']}] {ex['title'][:60]}")
