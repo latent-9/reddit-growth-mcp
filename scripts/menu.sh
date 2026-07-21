@@ -20,7 +20,7 @@ logo() {
   printf "\n"
   printf "   ${O}${T}reddit${R}${D}·${R}${G}${T}growth${R}   ${G}▁▂▃▄▅▇${R}${O}↗${R}\n"
   printf "   ${D}────────────────────────────────────${R}\n"
-  printf "   ${D}find the sub that grows you — and what to post${R}\n"
+  printf "   ${D}Ready to grow? Pick a mode and find where you'll be seen ${R}${G}↓${R}\n"
 }
 
 # Preset subreddits (all verified to have archive data). Numbered for quick pick.
