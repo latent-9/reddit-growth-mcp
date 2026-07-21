@@ -8,6 +8,17 @@ PY="python -m src.cli"
 TZ_OFFSET="${RG_TZ:-7}"   # local-time offset for plan/draft (override with RG_TZ)
 HAS_GUM=0; command -v gum >/dev/null 2>&1 && HAS_GUM=1
 
+# Theme gum: orange accent (was pink 212), readable text (was faint 240).
+if [ "$HAS_GUM" = 1 ]; then
+  export GUM_CHOOSE_CURSOR_FOREGROUND=208 GUM_CHOOSE_SELECTED_FOREGROUND=208 GUM_CHOOSE_HEADER_FOREGROUND=208
+  export GUM_FILTER_INDICATOR_FOREGROUND=208 GUM_FILTER_SELECTED_PREFIX_FOREGROUND=208
+  export GUM_FILTER_MATCH_FOREGROUND=220 GUM_FILTER_HEADER_FOREGROUND=208
+  export GUM_FILTER_PROMPT_FOREGROUND=208 GUM_FILTER_PLACEHOLDER_FOREGROUND=245
+  export GUM_INPUT_CURSOR_FOREGROUND=208 GUM_INPUT_PROMPT_FOREGROUND=208 GUM_INPUT_HEADER_FOREGROUND=208
+  # Hide gum's low-contrast help footer; we show readable hints in the header.
+  export GUM_FILTER_SHOW_HELP=false GUM_CHOOSE_SHOW_HELP=false
+fi
+
 T='\033[1m'; D='\033[38;5;245m'; G='\033[38;5;40m'; Y='\033[38;5;220m'
 C='\033[38;5;44m'; O='\033[38;5;208m'; R='\033[0m'
 GO=208; GC=42; GD=245; GY=220   # gum color codes
@@ -39,7 +50,7 @@ show_header() {
   if [ "$HAS_GUM" = 1 ]; then
     gum style --border rounded --border-foreground "$GO" --foreground "$GO" --bold \
       --padding "0 3" --margin "1 0 0 1" "reddit·growth   ▁▂▃▄▅▇↗"
-    gum style --foreground "$GD" --faint --margin "0 0 1 2" \
+    gum style --foreground 250 --margin "0 0 1 2" \
       "Ready to grow? Pick a mode — find where you'll be seen ↓"
   else
     logo_ansi; line
@@ -67,7 +78,7 @@ choose_mode() {
     for m in "${MODES[@]}"; do opts+=("$(printf '%-11s %s' "${m%%|*}" "${m#*|}")"); done
     local sel
     sel=$(printf '%s\n' "${opts[@]}" | gum choose --height 13 \
-      --header "  what do you want to do?" --cursor "❯ ") || { choice=quit; return; }
+      --header "  what do you want to do?   ↑↓ move · enter select" --cursor "❯ ") || { choice=quit; return; }
     choice=$(printf '%s' "$sel" | awk '{print $1}')
   else
     numbered_menu; read -r choice
@@ -78,8 +89,9 @@ choose_mode() {
 choose_subs() {
   if [ "$HAS_GUM" = 1 ]; then
     SUBS=$(printf '%s\n' "${SUBS_OPTS[@]}" | gum filter --no-limit --height 15 \
-      --placeholder "type to filter · tab=select · enter=confirm" \
-      --header "  pick subreddit(s)" --indicator "▸" | tr '\n' ' ')
+      --placeholder "type to filter…" \
+      --header "  pick subreddit(s)   type to search · tab select · enter confirm" \
+      --indicator "▸" | tr '\n' ' ')
   else
     pick; SUBS="$SEL"
   fi
@@ -87,7 +99,7 @@ choose_subs() {
 choose_one() {
   if [ "$HAS_GUM" = 1 ]; then
     SUB=$(printf '%s\n' "${SUBS_OPTS[@]}" | gum filter --height 15 \
-      --placeholder "type to filter…" --header "  pick a subreddit")
+      --placeholder "type to filter…" --header "  pick a subreddit   type to search · enter select")
   else
     pick; SUB="${SEL%% *}"
   fi
