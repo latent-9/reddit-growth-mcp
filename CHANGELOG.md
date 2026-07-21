@@ -17,6 +17,8 @@ semantic versioning.
   draft is missing to match what goes viral in the sub.
 
 ### Added
+- `scripts/menu.sh`: an interactive, menu-driven launcher — pick a mode, type
+  the subreddit(s), and (for draft/fit) a title, all in one terminal window.
 - Dockerfile and `.dockerignore` so the MCP server runs as a container on any
   host (and passes Glama's start-and-introspect listing check).
 - Draft CLI output shows at-a-glance red/amber/green indicators: a light on the
@@ -64,10 +66,10 @@ semantic versioning.
 - Startup logging now goes to stderr. On stdio transport stdout carries the
   JSON-RPC protocol, so the previous stdout banners could corrupt the client
   handshake and fail automated introspection (e.g. Glama's listing check).
-- `evaluate_draft` no longer labels a draft "viral" on a collapsed
-  distribution: on a mostly-removed sub where a top-percentile score is still
-  ~1 upvote, the band is capped to "weak" so the projected reach and the band
-  agree.
+- `evaluate_draft` caps the performance band by absolute projected reach, so a
+  size-fair percentile can't overstate a post on a small or mostly-removed sub
+  (a "top" post projecting only a handful of upvotes now reads weak/average,
+  not strong/viral, keeping the band and the projected reach consistent).
 - `evaluate_draft` verdict now folds in the sub's base removal rate: a fully
   compliant draft in a subreddit that removes most of what it gets is flagged
   `risky` (or `likely_removed` alongside warnings) instead of `likely_accepted`.

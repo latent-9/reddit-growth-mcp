@@ -76,6 +76,19 @@ def test_degenerate_distribution_not_labeled_viral():
     assert res["performance_score"] <= 35
 
 
+def test_small_sub_top_percentile_not_labeled_viral():
+    # A low-engagement sub: a top-percentile post still projects only ~6 upvotes.
+    # That must not read as viral/strong, however high its percentile.
+    small = {
+        "score_stats": {"mean": 4, "median": 2, "max": 10},
+        "score_percentiles": {25: 1, 50: 2, 75: 4, 90: 6, 95: 8},
+        "score_by_media_type": [{"value": "image", "median": 5, "mean": 6, "count": 10}],
+    }
+    res = _predict_performance("my project in 2026", "image", None, patterns=small)
+    assert res["projected_score"] < 25  # only a handful of upvotes
+    assert res["performance_band"] not in {"viral", "strong"}
+
+
 def test_compliance_flags_missing_required_flair():
     acceptance = {"post_requirements": {"flair_required": True}, "account_gates": []}
     out = _check_compliance("title", "", "text", None, acceptance)

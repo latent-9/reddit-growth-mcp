@@ -181,13 +181,18 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str], patte
     band = (
         "viral" if performance >= 90 else "strong" if performance >= 70 else "average" if performance >= 40 else "weak"
     )
-    # Guard against collapsed distributions: on a mostly-removed sub the whole
-    # sample sits near zero, so a top-percentile score can still be ~1 upvote.
-    # A projection that small is weak in absolute terms, whatever its percentile
-    # — don't let it read as viral/strong.
-    if projected < 5:
-        performance = min(performance, 35)
-        band = "weak"
+    # Absolute-reach sanity cap. A size-fair percentile can crown a post on a
+    # low-engagement (or mostly-removed) sub where the whole distribution sits
+    # near zero — a "top" post there still projects only a handful of upvotes.
+    # Cap the band (and score) by absolute projected reach so the label never
+    # overstates a tiny result as strong/viral.
+    reach_band = (
+        "viral" if projected >= 80 else "strong" if projected >= 25 else "average" if projected >= 8 else "weak"
+    )
+    rank = {"weak": 0, "average": 1, "strong": 2, "viral": 3}
+    if rank[reach_band] < rank[band]:
+        band = reach_band
+        performance = min(performance, {"weak": 35, "average": 60, "strong": 85}[band])
 
     return {
         "performance_score": performance,
