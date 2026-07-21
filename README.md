@@ -63,6 +63,18 @@ archive. Every command has the form `uv run python -m src.cli <command> [options
 (shown throughout as `reddit-growth <command>`, which is the installed alias).
 Add `-h` to any command for help, e.g. `uv run python -m src.cli plan -h`.
 
+### Interactive launcher
+
+Prefer a menu to flags? Run:
+
+```bash
+bash scripts/menu.sh
+```
+
+Pick a mode (plan, compare, patterns, draft, …), choose subreddits by number
+from a preset list (or type your own), and it runs the command for you — all in
+one window, looping until you quit. Type `h` in the menu for a built-in guide.
+
 ## What it answers
 
 - Which subreddits fit my topic, and how much reach do they have?
@@ -232,6 +244,17 @@ To run the server directly over stdio:
 
 ```bash
 uv run python -m src.server
+```
+
+### Docker
+
+The server also ships as a container (stdio transport):
+
+```bash
+docker build -t reddit-growth-mcp .
+docker run -i --rm reddit-growth-mcp
+# with credentials:
+docker run -i --rm -e REDDIT_CLIENT_ID=... -e REDDIT_CLIENT_SECRET=... reddit-growth-mcp
 ```
 
 ## Targeting workflow
