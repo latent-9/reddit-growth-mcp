@@ -67,6 +67,12 @@ archive. Every command has the form `uv run python -m src.cli <command> [options
 (shown throughout as `reddit-growth <command>`, which is the installed alias).
 Add `-h` to any command for help, e.g. `uv run python -m src.cli plan -h`.
 
+If you activate the virtualenv directly (`source .venv/bin/activate`) and zsh
+still reports `command not found: reddit-growth`, run `rehash` — zsh caches
+command locations at startup and needs a nudge after the venv is added to PATH.
+Opening a new terminal also works, or call the binary by path without activating:
+`.venv/bin/reddit-growth plan singularity LocalLLaMA mcp`.
+
 ### Interactive launcher
 
 Prefer a menu to flags? Run:
