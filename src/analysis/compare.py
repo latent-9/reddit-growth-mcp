@@ -98,7 +98,9 @@ def compare_subreddits(
     if isinstance(subreddits, str):
         subreddits = [subreddits]
     names = [clean_subreddit_name(s) for s in subreddits if s and s.strip()]
-    names = list(dict.fromkeys(names))  # de-dupe, keep first-seen order
+    # De-dupe case-insensitively (r/MCP and r/mcp are the same sub), keep order.
+    _seen: set[str] = set()
+    names = [n for n in names if not (n.lower() in _seen or _seen.add(n.lower()))]
     if not names:
         return {"error": "Provide at least one subreddit name"}
 

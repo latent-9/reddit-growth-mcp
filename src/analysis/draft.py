@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 import praw
 
 from .acceptance import analyze_acceptance
-from .helpers import clickbait_score, extract_title_features, leading_bracket_tag
+from .helpers import clean_subreddit_name, clickbait_score, extract_title_features, leading_bracket_tag
 from .patterns import analyze_post_patterns
 
 
@@ -326,7 +326,12 @@ def evaluate_draft_across(
     best suited to", independent of sub size.
     """
     results: List[Dict[str, Any]] = []
-    for name in dict.fromkeys(subreddits):  # de-dupe, keep first-seen order
+    seen: set[str] = set()  # de-dupe case-insensitively (r/MCP == r/mcp), keep order
+    for name in subreddits:
+        key = clean_subreddit_name(name).lower()
+        if not key or key in seen:
+            continue
+        seen.add(key)
         r = evaluate_draft(name, title, reddit, body, post_type, flair, time_filter, ctx)
         if "error" in r:
             results.append({"subreddit": name, "error": r["error"]})

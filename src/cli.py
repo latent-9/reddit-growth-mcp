@@ -521,7 +521,7 @@ live checks. All figures are estimates from a sample, not guarantees.
 """
 
 _TIME_CHOICES = ["day", "week", "month", "year", "all"]
-_TYPE_CHOICES = ["text", "image", "video", "link"]
+_TYPE_CHOICES = ["text", "image", "video", "gallery", "link"]
 _SUB_HELP = "Subreddit name, without the r/ prefix"
 _SUBS_HELP = "One or more subreddit names (without r/), space-separated"
 _TZ_HELP = "Local UTC offset in hours to also show posting times (e.g. 7 for WIB)"
@@ -597,7 +597,7 @@ def main(argv=None) -> int:
         default="text",
         dest="post_type",
         choices=_TYPE_CHOICES,
-        help="text | image | video | link (default: text)",
+        help="text | image | video | gallery | link (default: text)",
     )
     sd.add_argument("--flair", default=None, help="Intended flair (optional)")
     sd.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Pattern window (default: month)")
@@ -611,7 +611,7 @@ def main(argv=None) -> int:
         default="text",
         dest="post_type",
         choices=_TYPE_CHOICES,
-        help="text | image | video | link (default: text)",
+        help="text | image | video | gallery | link (default: text)",
     )
     sf.add_argument("--flair", default=None, help="Intended flair (optional)")
     sf.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Pattern window (default: month)")

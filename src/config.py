@@ -33,10 +33,11 @@ def get_reddit_client() -> praw.Reddit:
     client_secret = None
     user_agent = None
 
-    # Method 1: Try environment variables
+    # Method 1: Try environment variables (no default yet, so a .env-only
+    # user agent below isn't masked; the fallback is applied once at the end).
     client_id = os.environ.get("REDDIT_CLIENT_ID")
     client_secret = os.environ.get("REDDIT_CLIENT_SECRET")
-    user_agent = os.environ.get("REDDIT_USER_AGENT", "RedditMCP/1.0")
+    user_agent = os.environ.get("REDDIT_USER_AGENT")
 
     # Method 2: Try loading from .env file (local development)
     if not client_id or not client_secret:
@@ -47,7 +48,9 @@ def get_reddit_client() -> praw.Reddit:
             client_id = os.getenv("REDDIT_CLIENT_ID")
             client_secret = os.getenv("REDDIT_CLIENT_SECRET")
             if not user_agent:
-                user_agent = os.getenv("REDDIT_USER_AGENT", "RedditMCP/1.0")
+                user_agent = os.getenv("REDDIT_USER_AGENT")
+
+    user_agent = user_agent or "RedditMCP/1.0"
 
     if not client_id or not client_secret:
         raise ValueError(

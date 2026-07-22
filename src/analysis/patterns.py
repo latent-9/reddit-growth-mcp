@@ -102,11 +102,12 @@ def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str, min_n: int = 5) 
     on_avg, off_avg = safe_mean(on), safe_mean(off)
     # Lift on means (median is often 0 in low-engagement subs). A near-zero
     # baseline makes the ratio explode into meaningless figures (+57000%), so
-    # cap what we report and only trust the lift when the baseline itself
-    # carries signal (both groups sampled AND the 'without' group actually scores).
+    # cap what we report; the sample-count gate below is what makes it trustworthy.
+    # (Don't floor on off_avg magnitude — ratio metrics like 'discussion' are
+    # legitimately < 1, and a floor would wrongly flag those signals unreliable.)
     lift = round((on_avg / off_avg - 1) * 100, 1) if off_avg else 0.0
     lift = max(-95.0, min(300.0, lift))
-    reliable = len(on) >= min_n and len(off) >= min_n and off_avg >= 1.0
+    reliable = len(on) >= min_n and len(off) >= min_n
     return {
         "with_avg_score": on_avg,
         "without_avg_score": off_avg,

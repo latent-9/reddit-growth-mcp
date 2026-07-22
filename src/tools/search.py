@@ -43,6 +43,13 @@ def search_in_subreddit(
         # Validate limit
         limit = min(max(1, limit), 100)
 
+        # Coerce free-form MCP inputs to valid values (praw ignores a bad sort and
+        # returns default order silently; a bad time_filter raises ValueError).
+        if sort not in ("relevance", "hot", "top", "new", "comments"):
+            sort = "relevance"
+        if time_filter not in ("all", "year", "month", "week", "day", "hour"):
+            time_filter = "all"
+
         # Clean subreddit name (remove r/ prefix if present)
         clean_name = subreddit_name.replace("r/", "").replace("/r/", "").strip()
 

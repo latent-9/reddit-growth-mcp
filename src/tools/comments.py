@@ -76,6 +76,11 @@ async def fetch_submission_with_comments(
         if not submission_id and not url:
             return {"error": "Either submission_id or url must be provided"}
 
+        # Clamp/normalize inputs (the MCP boundary passes these as free int/str).
+        comment_limit = min(max(1, comment_limit), 500)
+        if comment_sort not in ("best", "top", "new"):
+            comment_sort = "best"
+
         # Get submission
         try:
             if submission_id:

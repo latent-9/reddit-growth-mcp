@@ -23,7 +23,7 @@ class SubredditInfo(BaseModel):
     """Model for subreddit metadata."""
 
     name: str
-    subscribers: int
+    subscribers: Optional[int] = None  # praw returns None for some readable subs
     description: str
 
 
