@@ -85,6 +85,17 @@ def test_empty_input():
     assert "error" in compare.compare_subreddits([])
 
 
+def test_timeless_post_does_not_zero_velocity(stub_arctic):
+    # A single archived post with a missing/zero created_utc must not drag the
+    # time span to ~decades and collapse posts_per_day to 0 for an active sub.
+    base = 1_700_000_000
+    posts = [_post(f"p{i}", 100, comments=5, created=base + i * 3600) for i in range(12)]
+    posts.append(_post("timeless", 100, comments=5, created=0))
+    stub_arctic(posts)
+    prof = compare.compare_subreddits(["testsub"], sample=50)["ranked"][0]
+    assert prof["posts_per_day"] > 1  # ~13 posts over ~11h, not 0.0
+
+
 def test_duplicate_subs_are_deduped(stub_arctic):
     # Same sub via prefix ('r/mcp') or different case ('MCP') is one subreddit on
     # Reddit, so it must be profiled once, keeping the first-seen spelling.

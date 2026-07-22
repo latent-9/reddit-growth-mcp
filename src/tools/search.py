@@ -5,6 +5,7 @@ from fastmcp import Context
 from prawcore import (
     Forbidden,
     NotFound,
+    Redirect,
     ResponseException,
     ServerError,
     TooManyRequests,
@@ -51,16 +52,19 @@ def search_in_subreddit(
             time_filter = "all"
 
         # Clean subreddit name (remove r/ prefix if present)
-        clean_name = subreddit_name.replace("r/", "").replace("/r/", "").strip()
+        clean_name = subreddit_name.replace("/r/", "").replace("r/", "").strip()
 
         # Search within the specified subreddit
         try:
             subreddit_obj = reddit.subreddit(clean_name)
-            # Verify subreddit exists
-            _ = subreddit_obj.display_name
+            # Force a real fetch to check the sub exists. `display_name` is set
+            # in __init__ (never fetches); `id` is lazy, so it triggers the
+            # about-request and surfaces NotFound/Redirect/Forbidden here.
+            _ = subreddit_obj.id
 
             search_results = subreddit_obj.search(query, sort=sort, time_filter=time_filter, limit=limit)
-        except NotFound:
+        except (NotFound, Redirect):
+            # A nonexistent sub redirects Reddit's about-page to search (302).
             return {
                 "error": f"Subreddit r/{clean_name} not found",
                 "status_code": 404,

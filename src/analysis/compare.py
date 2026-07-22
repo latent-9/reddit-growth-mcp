@@ -25,7 +25,9 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
         return {"subreddit": name, "error": "no archived posts (or rate-limited)"}
 
     # Posting velocity as a traffic proxy (Arctic gives no subscriber counts).
-    times = sorted(p.get("created_utc", 0) or 0 for p in posts)
+    # Drop timeless posts (missing/zero created_utc); a single 0 would drag
+    # times[0] to 0 and inflate the span to ~decades, zeroing posts_per_day.
+    times = sorted(t for t in (p.get("created_utc", 0) or 0 for p in posts) if t > 0)
     span_days = (times[-1] - times[0]) / 86400.0 if len(times) >= 2 else 0.0
     posts_per_day = round(len(posts) / span_days, 1) if span_days > 0 else 0.0
 

@@ -159,6 +159,23 @@ def _reliability(method: str, sampled: int, filtered_ratio: float) -> str:
     return "high"
 
 
+def _strictness(removal_rate: float, reliability: str, account_gates: list, flair_required: bool) -> str:
+    """Classify how strict a sub is, driving the draft's risk verdict.
+
+    A low-confidence removal read (tiny sample) must NOT inflate strictness —
+    the checklist already withholds the "strict" warning in that case, so
+    letting the same noisy rate flip strictness to "high" (→ "risky" draft
+    verdict) would contradict the tool's own confidence caveat. Hard rules
+    (account gates, required flair) hold regardless of sample size.
+    """
+    rate = removal_rate if reliability != "low" else 0.0
+    if rate >= 0.3 or account_gates or flair_required:
+        return "high"
+    if rate >= 0.1:
+        return "medium"
+    return "low"
+
+
 def analyze_acceptance(
     subreddit_name: str,
     reddit: praw.Reddit = None,
@@ -302,13 +319,7 @@ def analyze_acceptance(
             "based on removal patterns only. Add creds for exact rule text."
         )
 
-    strictness = (
-        "high"
-        if removal_rate >= 0.3 or account_gates or requirements.get("flair_required")
-        else "medium"
-        if removal_rate >= 0.1
-        else "low"
-    )
+    strictness = _strictness(removal_rate, reliability, account_gates, requirements.get("flair_required", False))
 
     if method == "archive_live_diff":
         removal_note = "Removal rate from live diff (Arctic archive vs current Reddit): accurate."

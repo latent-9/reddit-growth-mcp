@@ -1,6 +1,6 @@
 """Unit tests for the acceptance reliability ladder (pure, no network)."""
 
-from src.analysis.acceptance import _reliability
+from src.analysis.acceptance import _reliability, _strictness
 
 
 def test_small_sample_is_low_for_every_method():
@@ -32,3 +32,22 @@ def test_praw_listing_is_medium_when_well_sampled():
 def test_small_sample_boundary():
     assert _reliability("archive_live_diff", sampled=9, filtered_ratio=0.0) == "low"
     assert _reliability("archive_live_diff", sampled=10, filtered_ratio=0.0) == "high"
+
+
+def test_strictness_high_rate_but_low_reliability_is_not_high():
+    # 3-of-9 removed reads as 33%, but the sample is too small to trust — the
+    # noisy rate must NOT flip strictness to "high" (which would falsely mark a
+    # compliant draft "risky"). With no hard gates it drops to "low".
+    assert _strictness(0.333, reliability="low", account_gates=[], flair_required=False) == "low"
+
+
+def test_strictness_high_rate_with_reliability_drives_high():
+    assert _strictness(0.333, reliability="high", account_gates=[], flair_required=False) == "high"
+    assert _strictness(0.15, reliability="high", account_gates=[], flair_required=False) == "medium"
+
+
+def test_strictness_hard_rules_win_regardless_of_reliability():
+    # Account gates / required flair are exact rules, reliable even on a tiny
+    # sample, so they still force "high".
+    assert _strictness(0.0, reliability="low", account_gates=[{"type": "age"}], flair_required=False) == "high"
+    assert _strictness(0.0, reliability="low", account_gates=[], flair_required=True) == "high"

@@ -48,7 +48,9 @@ def estimate_activity_archive(
     if not posts:
         return {"error": "No archived posts found", "subreddit": name}
 
-    times = sorted(p.get("created_utc", 0) or 0 for p in posts)
+    # Drop timeless posts (missing/zero created_utc); a single 0 would drag
+    # times[0] to 0 and inflate the span to ~decades, zeroing posts_per_day.
+    times = sorted(t for t in (p.get("created_utc", 0) or 0 for p in posts) if t > 0)
     span_days = (times[-1] - times[0]) / 86400.0 if len(times) >= 2 else 0.0
     posts_per_day = round(len(posts) / span_days, 1) if span_days > 0 else 0.0
 
