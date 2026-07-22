@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 
@@ -41,9 +42,60 @@ def _get_reddit():
         return None
 
 
+# ── Terminal styling ──────────────────────────────────────────────────────
+# ANSI colors, but only when writing to a real terminal. Piped or redirected
+# output (or NO_COLOR set) stays plain text so it greps/copy-pastes cleanly and
+# never leaks escape codes into files.
+_COLOR = bool(getattr(sys.stdout, "isatty", lambda: False)()) and not os.environ.get("NO_COLOR")
+
+
+def _c(text: object, *codes: str) -> str:
+    """Wrap text in ANSI codes when color is on; otherwise return it as-is."""
+    if not _COLOR or not codes:
+        return str(text)
+    return f"\033[{';'.join(codes)}m{text}\033[0m"
+
+
+def _bold(t: object) -> str:
+    return _c(t, "1")
+
+
+def _cyan(t: object) -> str:
+    return _c(t, "36", "1")
+
+
+def _green(t: object) -> str:
+    return _c(t, "32")
+
+
+def _red(t: object) -> str:
+    return _c(t, "31")
+
+
+def _yellow(t: object) -> str:
+    return _c(t, "33")
+
+
+def _dim(t: object) -> str:
+    return _c(t, "2")
+
+
+def _safety_color(safety: str, text: object = None) -> str:
+    """Color a safety label (or an aligned string of it): green/amber/red."""
+    fn = {"safe": _green, "moderate": _yellow, "strict": _red}.get(safety, str)
+    return fn(text if text is not None else safety)
+
+
+def _removal_color(rate: float, text: object = None) -> str:
+    """Color a removal-rate value: green low, amber medium, red high."""
+    fn = _green if rate < 0.20 else _yellow if rate < 0.50 else _red
+    return fn(text if text is not None else f"{rate:.0%}")
+
+
 def _hr(title: str) -> None:
-    print(f"\n\033[1m{title}\033[0m")
-    print("─" * min(len(title), 60))
+    print()
+    print(_cyan(title))
+    print(_dim("─" * min(len(title), 60)))
 
 
 def _print_unavailable(d: dict, what: str) -> None:
@@ -68,7 +120,8 @@ def _print_unavailable(d: dict, what: str) -> None:
         )
     else:
         msg = f"Couldn't compute {what} for r/{sub}: {d.get('error')}"
-    print(f"\n\033[1m⚠ {what.upper()} unavailable · r/{sub}\033[0m")
+    print()
+    print(_yellow(f"⚠ {what.upper()} unavailable · r/{sub}"))
     print(msg)
 
 
@@ -210,21 +263,31 @@ def _print_compare(d: dict) -> None:
         print("Error:", d["error"])
         return
     _hr(f"SUBREDDIT COMPARISON  (ranked by {d.get('ranked_by', 'viral')})")
+    # Header and rows share the same 2-space indent + column widths so they line
+    # up. Colored cells are padded to width *first*, then wrapped — ANSI codes are
+    # zero-width, so alignment is preserved.
     print(
-        f"{'subreddit':20} {'growth':>7} {'viral':>7} {'posts/day':>10} "
-        f"{'comments':>9} {'removal':>8} {'safety':>9}  conf"
+        _dim(
+            f"  {'subreddit':<20}{'growth':>8}{'viral':>8}{'posts/d':>9}"
+            f"{'comments':>10}{'removal':>9}{'safety':>10}  conf"
+        )
     )
     for p in d["ranked"]:
-        conf = "low*" if p.get("low_confidence") else "ok"
+        name = f"r/{p['subreddit']}"[:20]
+        rate = p["removal_rate"]
+        removal = _removal_color(rate, f"{rate:>9.0%}")
+        safety_raw = p.get("safety", "-")
+        safety = _safety_color(safety_raw, f"{safety_raw:>10}")
+        conf = _yellow("low*") if p.get("low_confidence") else _dim("ok")
         print(
-            f"  r/{p['subreddit']:17} {p.get('growth_score', 0):>7} {p.get('viral_potential', 0):>7} "
-            f"{p.get('posts_per_day', 0):>10} {p.get('median_comments', 0):>9} "
-            f"{p['removal_rate']:>7.0%} {p.get('safety', '-'):>9}  {conf}"
+            f"  {name:<20}{p.get('growth_score', 0):>8}{p.get('viral_potential', 0):>8}"
+            f"{p.get('posts_per_day', 0):>9}{p.get('median_comments', 0):>10}"
+            f"{removal}{safety}  {conf}"
         )
     if any(p.get("low_confidence") for p in d["ranked"]):
-        print("  * low = many AutoMod-filtered posts; add creds for accuracy")
+        print(_dim("  * low = many AutoMod-filtered posts; add creds for accuracy"))
     for f in d.get("failed", []):
-        print(f"  r/{f['subreddit']:17} — {f['error']}")
+        print(f"  {('r/' + f['subreddit'])[:20]:<20}{_dim('— ' + f['error'])}")
     if d.get("best_pick"):
         print(f"\nBest pick: r/{d['best_pick']}")
     print(f"({d['criteria']})")
@@ -463,25 +526,27 @@ def _run_plan(args, reddit) -> None:
 
     t = plan["target"]
     _hr("GROWTH PLAN")
-    print(f"Target: r/{t['subreddit']}")
+    print(f"Target: {_bold('r/' + t['subreddit'])}")
+    _rem = t.get("removal_rate") or 0.0
     print(
-        f"  growth {t['growth_score']} · viral {t['viral_potential']} · "
+        f"  growth {_green(t['growth_score'])} · viral {t['viral_potential']} · "
         f"{t['posts_per_day']} posts/day · {t['median_comments']} comments · "
-        f"{t['removal_rate']:.0%} removed ({t['safety']})"
+        f"{_removal_color(_rem)} removed ({_safety_color(t.get('safety'))})"
     )
     if t.get("insight_tier"):
         print(f"  discussion depth (insight): {t['insight_tier']} ({t.get('substantive_ratio', 0):.0%} substantive)")
     if t.get("caveat"):
-        print(f"  ⚠️  {t['caveat']}")
+        print(_yellow(f"  ⚠️  {t['caveat']}"))
     if plan["avoided"]:
         print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in plan['avoided'])}")
 
     if plan["also_consider"]:
         _hr("Also worth posting to (safe, tailor per sub)")
         for p in plan["also_consider"]:
+            _pr = p.get("removal_rate") or 0.0
             print(
-                f"  r/{p['subreddit']:18} growth {p.get('growth_score', 0):>6} · "
-                f"{p['removal_rate']:.0%} removed ({p.get('safety')})"
+                f"  {('r/' + p['subreddit']):18} growth {p.get('growth_score', 0):>6} · "
+                f"{_removal_color(_pr)} removed ({_safety_color(p.get('safety'))})"
             )
 
     rc = plan.get("recipe")
