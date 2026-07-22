@@ -120,7 +120,10 @@ def _predict_performance(title: str, post_type: str, flair: Optional[str], patte
             pct = sig.get("lift_pct", 0)
             r = _clamp(1 + pct / 100.0, 0.5, 2.0)
             mult *= r
-            drivers.append({"factor": key, "impact": f"×{round(r, 2)} ({pct:+.0f}%)"})
+            # Show the *effective* lift after clamping, so the % matches the
+            # multiplier actually applied (a raw +500% that clamps to ×2 reads +100%).
+            eff_pct = (r - 1) * 100
+            drivers.append({"factor": key, "impact": f"×{round(r, 2)} ({eff_pct:+.0f}%)"})
     # Suggest a high-lift signal the draft is missing (reliable signals only).
     for key, feat in [("has_number", "has_number"), ("showcase_titles", "is_showcase")]:
         sig = lift.get(key, {})

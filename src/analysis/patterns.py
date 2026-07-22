@@ -97,8 +97,13 @@ def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str, min_n: int = 5) 
     off = [r[perf] for r in rows if not r.get(key)]
     on_med, off_med = _median(on), _median(off)
     on_avg, off_avg = safe_mean(on), safe_mean(off)
-    # Lift on means (median is often 0 in low-engagement subs).
+    # Lift on means (median is often 0 in low-engagement subs). A near-zero
+    # baseline makes the ratio explode into meaningless figures (+57000%), so
+    # cap what we report and only trust the lift when the baseline itself
+    # carries signal (both groups sampled AND the 'without' group actually scores).
     lift = round((on_avg / off_avg - 1) * 100, 1) if off_avg else 0.0
+    lift = max(-95.0, min(300.0, lift))
+    reliable = len(on) >= min_n and len(off) >= min_n and off_avg >= 1.0
     return {
         "with_avg_score": on_avg,
         "without_avg_score": off_avg,
@@ -106,7 +111,7 @@ def _bool_lift(rows: List[Dict[str, Any]], key: str, perf: str, min_n: int = 5) 
         "without_median": off_med,
         "lift_pct": lift,
         "sample_with": len(on),
-        "reliable": len(on) >= min_n and len(off) >= min_n,
+        "reliable": reliable,
     }
 
 

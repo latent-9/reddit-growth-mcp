@@ -413,15 +413,26 @@ def _content_style(media: str, flair, keywords, tags) -> str:
     """A human-readable hint for what kind of post to make (meme, news, …),
     inferred from the winning flair, keywords, and title tags."""
     blob = " ".join([str(flair or "")] + list(keywords or []) + list(tags or [])).lower()
-    if any(w in blob for w in ("funny", "meme", "humor", "humour", "shitpost", "lol")):
+
+    def has(*words) -> bool:
+        # Whole-word for short/ambiguous tokens (oc, how, lol); word-start prefix
+        # for the rest so plurals/suffixes still match — without false positives
+        # like 'rocket'/'protocol'→'oc' or 'show'→'how'.
+        for w in words:
+            pat = rf"\b{re.escape(w)}\b" if len(w) <= 3 else rf"\b{re.escape(w)}"
+            if re.search(pat, blob):
+                return True
+        return False
+
+    if has("funny", "meme", "humor", "humour", "shitpost", "lol"):
         return "memes / humor"
-    if any(w in blob for w in ("news", "launch", "announce", "leak", "report", "breaking", "update")):
+    if has("news", "launch", "announce", "leak", "report", "breaking", "update"):
         return "news / announcements"
-    if any(w in blob for w in ("oc", "showcase", "project", "built", "made", "release", "guide", "tutorial")):
+    if has("oc", "showcase", "project", "built", "made", "release", "guide", "tutorial"):
         return "showcases / projects"
-    if any(w in blob for w in ("question", "help", "how")):
+    if has("question", "help", "how"):
         return "questions / help"
-    if any(w in blob for w in ("discussion", "opinion", "thoughts")):
+    if has("discussion", "opinion", "thoughts"):
         return "discussion posts"
     return {
         "image": "images (screenshots / visuals)",
@@ -436,7 +447,13 @@ def _run_plan(args, reddit) -> None:
     """Growth planner: rank subs, pick the safest strong one, print its recipe."""
     plan = build_growth_plan(args.subreddits, reddit, args.window, time_filter=args.time)
     if "error" in plan:
-        print("Could not build a plan:", plan["error"])
+        if getattr(args, "json", False):
+            print(json.dumps(plan, indent=2, default=str))
+        else:
+            print("Could not build a plan:", plan["error"], file=sys.stderr)
+        return
+    if getattr(args, "json", False):
+        print(json.dumps(plan, indent=2, default=str))
         return
     if getattr(args, "md", False):
         print(_plan_markdown(plan, args.tz))
@@ -516,10 +533,13 @@ def main(argv=None) -> int:
         epilog=_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--json", action="store_true", help="Emit raw JSON instead of a formatted report")
+    # --json is shared by every subcommand so it works as a trailing flag
+    # (e.g. `reddit-growth plan mcp --json`), the convention users expect.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--json", action="store_true", help="Emit raw JSON instead of a formatted report")
     sub = p.add_subparsers(dest="cmd", required=True, metavar="command")
 
-    sp = sub.add_parser("patterns", help="What makes posts perform (viral recipe, timing, keywords)")
+    sp = sub.add_parser("patterns", parents=[common], help="What makes posts perform (viral recipe, timing, keywords)")
     sp.add_argument("subreddit", help=_SUB_HELP)
     sp.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Time window (default: month)")
     sp.add_argument("--limit", type=int, default=200, help="Posts to sample (default: 200)")
@@ -531,19 +551,19 @@ def main(argv=None) -> int:
     )
     sp.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
 
-    sa = sub.add_parser("acceptance", help="Removal rate and what tends to get removed")
+    sa = sub.add_parser("acceptance", parents=[common], help="Removal rate and what tends to get removed")
     sa.add_argument("subreddit", help=_SUB_HELP)
     sa.add_argument("--sample", type=int, default=200, help="Posts to sample (default: 200)")
 
-    st_ = sub.add_parser("traffic", help="Estimate a subreddit's activity (posts/day)")
+    st_ = sub.add_parser("traffic", parents=[common], help="Estimate a subreddit's activity (posts/day)")
     st_.add_argument("subreddit", help=_SUB_HELP)
     st_.add_argument("--window", default="30d", help="Archive lookback, e.g. 7d/30d (default: 30d)")
 
-    si = sub.add_parser("insight", help="Measure discussion depth (comment substance) and sentiment")
+    si = sub.add_parser("insight", parents=[common], help="Measure discussion depth (comment substance) and sentiment")
     si.add_argument("subreddit", help=_SUB_HELP)
     si.add_argument("--after", default="3d", help="Comment lookback, e.g. 3d/7d (default: 3d)")
 
-    sc = sub.add_parser("compare", help="Rank subreddits by growth/viral/insight, with safety")
+    sc = sub.add_parser("compare", parents=[common], help="Rank subreddits by growth/viral/insight, with safety")
     sc.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
     sc.add_argument("--window", default="60d", help="Archive lookback (default: 60d)")
     sc.add_argument("--sample", type=int, default=200, help="Posts to sample per sub (default: 200)")
@@ -555,19 +575,19 @@ def main(argv=None) -> int:
         help="Ranking metric (default: growth)",
     )
 
-    sr = sub.add_parser("report", help="Full report: acceptance + patterns for a subreddit")
+    sr = sub.add_parser("report", parents=[common], help="Full report: acceptance + patterns for a subreddit")
     sr.add_argument("subreddit", help=_SUB_HELP)
     sr.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Time window (default: month)")
     sr.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
 
-    spl = sub.add_parser("plan", help="Growth plan: best safe target, cross-posts, recipe, timing")
+    spl = sub.add_parser("plan", parents=[common], help="Growth plan: best safe target, cross-posts, recipe, timing")
     spl.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
     spl.add_argument("--window", default="30d", help="Archive lookback (default: 30d)")
     spl.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Recipe window (default: month)")
     spl.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
     spl.add_argument("--md", action="store_true", help="Output the plan as Markdown (for saving/sharing)")
 
-    sd = sub.add_parser("draft", help="Score a draft: acceptance risk + performance + fixes")
+    sd = sub.add_parser("draft", parents=[common], help="Score a draft: acceptance risk + performance + fixes")
     sd.add_argument("subreddit", help=_SUB_HELP)
     sd.add_argument("--title", required=True, help="Draft post title")
     sd.add_argument("--body", default="", help="Draft self-text body (optional)")
@@ -576,7 +596,7 @@ def main(argv=None) -> int:
     sd.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Pattern window (default: month)")
     sd.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
 
-    sf = sub.add_parser("fit", help="Score one draft across subs, ranked by size-fair fit")
+    sf = sub.add_parser("fit", parents=[common], help="Score one draft across subs, ranked by size-fair fit")
     sf.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
     sf.add_argument("--title", required=True, help="Draft post title")
     sf.add_argument("--type", default="text", dest="post_type", help="text | image | video | link (default: text)")

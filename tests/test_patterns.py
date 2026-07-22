@@ -44,6 +44,18 @@ def test_bool_lift_reliability_flag():
     assert _bool_lift(rows2, "is_question", "_perf", min_n=5)["reliable"] is True
 
 
+def test_bool_lift_near_zero_baseline_is_capped_and_unreliable():
+    # Both groups cleared the sample floor, but the 'without' group barely scores
+    # (avg ~0.4). The raw ratio would explode (+50000%); the report must cap the
+    # figure and refuse to call it reliable against a near-zero baseline.
+    rows = [{"has_number": True, "_perf": 300} for _ in range(6)]
+    rows += [{"has_number": False, "_perf": 0} for _ in range(5)]
+    rows += [{"has_number": False, "_perf": 2} for _ in range(1)]  # off_avg ≈ 0.33
+    out = _bool_lift(rows, "has_number", "_perf", min_n=5)
+    assert out["lift_pct"] <= 300.0  # capped, no absurd +50000%
+    assert out["reliable"] is False  # baseline too weak to trust the lift
+
+
 def test_clickbait_effect_verdict():
     baity = [{"clickbait": 0.6, "_perf": 5} for _ in range(5)]
     clean = [{"clickbait": 0.0, "_perf": 50} for _ in range(5)]
