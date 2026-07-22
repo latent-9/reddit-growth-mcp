@@ -31,7 +31,22 @@ def build_growth_plan(
     eligible = [p for p in ranked if p.get("safety") != "strict" and not p.get("low_confidence")]
     target = (eligible or ranked)[0]
     also = [p for p in eligible if p["subreddit"] != target["subreddit"]][:4]
-    avoided = [p["subreddit"] for p in ranked if p.get("safety") == "strict" or p.get("low_confidence")]
+    # Never list the chosen target in its own avoid list. When no candidate is
+    # eligible we fall back to the best of a strict/low-confidence lot, so the
+    # target would otherwise contradict itself by appearing under `avoided`.
+    avoided = [
+        p["subreddit"]
+        for p in ranked
+        if (p.get("safety") == "strict" or p.get("low_confidence")) and p["subreddit"] != target["subreddit"]
+    ]
+    target_caveat = (
+        None
+        if eligible
+        else (
+            "No fully safe, well-sampled candidate — this target is the best of a "
+            "strict/low-confidence set; treat the pick as tentative."
+        )
+    )
 
     recipe: Optional[Dict[str, Any]] = None
     best_hours: List[Dict[str, Any]] = []
@@ -60,6 +75,7 @@ def build_growth_plan(
             "substantive_ratio": substantive_ratio,
             "removal_rate": target.get("removal_rate"),
             "safety": target.get("safety"),
+            "caveat": target_caveat,
         },
         "also_consider": [
             {

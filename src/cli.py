@@ -371,6 +371,8 @@ def _plan_markdown(plan: dict, tz: float) -> str:
     )
     if t.get("insight_tier"):
         out.append(f"- discussion depth: **{t['insight_tier']}** ({t.get('substantive_ratio', 0):.0%} substantive)")
+    if t.get("caveat"):
+        out.append(f"- ⚠️ {t['caveat']}")
     if plan["avoided"]:
         out.append(f"- avoided (strict/low-confidence): {', '.join('r/' + s for s in plan['avoided'])}")
 
@@ -469,6 +471,8 @@ def _run_plan(args, reddit) -> None:
     )
     if t.get("insight_tier"):
         print(f"  discussion depth (insight): {t['insight_tier']} ({t.get('substantive_ratio', 0):.0%} substantive)")
+    if t.get("caveat"):
+        print(f"  ⚠️  {t['caveat']}")
     if plan["avoided"]:
         print(f"  Avoided (strict/low-confidence): {', '.join('r/' + s for s in plan['avoided'])}")
 

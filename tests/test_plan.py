@@ -47,3 +47,26 @@ def test_includes_recipe_and_crossposts(monkeypatch):
 def test_error_when_no_data(monkeypatch):
     monkeypatch.setattr(plan, "compare_subreddits", lambda *a, **k: {"error": "no data"})
     assert "error" in plan.build_growth_plan(["x"])
+
+
+def test_target_not_listed_in_own_avoided_when_all_low_confidence(monkeypatch):
+    # Niche/low-volume subs are routinely all low_confidence (compare sets it on
+    # considered < 10). The fallback target must NOT appear in its own avoid list,
+    # and a caveat must flag that it's the best of a bad lot.
+    ranked = [_sub("SmallA", low=True, growth=800), _sub("SmallB", low=True, growth=400)]
+    _stub(monkeypatch, ranked)
+    out = plan.build_growth_plan(["SmallA", "SmallB"])
+    assert out["target"]["subreddit"] == "SmallA"
+    assert "SmallA" not in out["avoided"]  # no self-contradiction
+    assert out["avoided"] == ["SmallB"]  # the other bad option is still avoided
+    assert out["target"]["caveat"]  # fallback flagged as tentative
+
+
+def test_clean_pick_has_no_caveat(monkeypatch):
+    # When an eligible (safe, well-sampled) candidate exists, no caveat is set.
+    ranked = [_sub("Safe", growth=100), _sub("Strict", safety="strict", growth=999)]
+    _stub(monkeypatch, ranked)
+    out = plan.build_growth_plan(["Safe", "Strict"])
+    assert out["target"]["subreddit"] == "Safe"
+    assert out["target"]["caveat"] is None
+    assert out["avoided"] == ["Strict"]

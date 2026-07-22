@@ -144,6 +144,21 @@ def _sample_via_live_diff(name: str, reddit: praw.Reddit, after: str, limit: int
     return live, mod_removed, filtered
 
 
+def _reliability(method: str, sampled: int, filtered_ratio: float) -> str:
+    """How much to trust the removal-rate read.
+
+    A tiny sample is unreliable regardless of source, so the `sampled < 10`
+    guard is method-independent. Archive-direct additionally can't confirm
+    AutoMod-filtered posts, so a heavy filtered share also drags it down.
+    Live-diff is authoritative; PRAW listings hide removals (lower bound).
+    """
+    if sampled < 10 or (method == "archive" and filtered_ratio > 0.3):
+        return "low"
+    if method.startswith("praw"):
+        return "medium"
+    return "high"
+
+
 def analyze_acceptance(
     subreddit_name: str,
     reddit: praw.Reddit = None,
@@ -214,16 +229,13 @@ def analyze_acceptance(
     sampled = len(live) + len(mod_removed)
     removal_rate = round(len(mod_removed) / sampled, 3) if sampled else 0.0
 
-    # Reliability: archive-direct can't confirm AutoMod-filtered posts. If many
-    # are filtered, the removal rate is unreliable — recommend adding creds.
+    # Reliability: a tiny sample is unreliable from any source; archive-direct
+    # additionally can't confirm AutoMod-filtered posts, so a heavy filtered
+    # share drags it down too. See `_reliability` for the full ladder.
     total_seen = len(live) + len(mod_removed) + len(filtered)
     filtered_ratio = round(len(filtered) / total_seen, 2) if total_seen else 0.0
-    if method == "archive" and (filtered_ratio > 0.3 or sampled < 10):
-        reliability = "low"
-    elif method.startswith("praw"):
-        reliability = "medium"
-    else:
-        reliability = "high"
+    heavy_filtering = method == "archive" and filtered_ratio > 0.3
+    reliability = _reliability(method, sampled, filtered_ratio)
 
     # What distinguishes removed posts from survivors?
     def _share(rows: List[Dict[str, Any]], key: str) -> float:
@@ -271,11 +283,17 @@ def analyze_acceptance(
     if removal_rate >= 0.3 and reliability != "low":
         checklist.append(f"HIGH removal rate ({removal_rate:.0%}) — this sub is strict; follow rules exactly.")
     if reliability == "low":
-        checklist.append(
-            f"Low-confidence removal read: {filtered_ratio:.0%} of posts are "
-            "AutoMod-filtered (may have been approved). Add Reddit credentials "
-            "for an accurate live check."
-        )
+        if heavy_filtering:
+            checklist.append(
+                f"Low-confidence removal read: {filtered_ratio:.0%} of posts are "
+                "AutoMod-filtered (may have been approved). Add Reddit credentials "
+                "for an accurate live check."
+            )
+        else:
+            checklist.append(
+                f"Low-confidence removal read: only {sampled} posts sampled — "
+                "too few to estimate the removal rate reliably."
+            )
 
     rules_available = reddit is not None and bool(rules or requirements)
     if not rules_available:
