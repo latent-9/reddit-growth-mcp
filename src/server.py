@@ -75,7 +75,15 @@ _NO_CREDS = {
 def initialize_reddit_client():
     global reddit
     reddit = get_reddit_client()
-    register_resources(mcp, reddit)
+
+
+# The server-info resource is static (it never touches the Reddit client), so
+# register it once at import — independent of credentials. Doing it here instead
+# of inside initialize_reddit_client() fixes two bugs: (1) main() runs that init
+# again at startup, which re-registered the resource and made FastMCP warn
+# "Component already exists: resource:reddit://server-info"; (2) with no creds,
+# init raised before this line, so the creds-free resource silently vanished.
+register_resources(mcp, reddit)
 
 
 try:
