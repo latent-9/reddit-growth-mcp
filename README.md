@@ -8,13 +8,14 @@
 [![CI](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A toolkit for analyzing subreddits and the patterns behind posts that get
-accepted and perform well. It helps you choose the right communities and shape
-posts that fit each one, using real data rather than guesswork.
+**Analyze any subreddit and score your post before you publish — no Reddit API
+key required.**
 
-It runs as an MCP server (for use inside Claude, Cursor, and other MCP clients)
-and as a standalone command-line tool. Most analysis works without any Reddit
-API credentials, because it reads from a public historical archive.
+Reddit Growth MCP finds where to post, reads each community's viral recipe
+(format, flair, timing, keywords), and predicts how a draft will perform — all
+from a public historical archive, so the whole core workflow runs with no account
+or API key. It works as an MCP server (for Claude, Cursor, and other MCP clients)
+and as a standalone command-line tool.
 
 <p align="center">
   <img src="assets/demo-plan.png" alt="reddit-growth in action" width="760" />
