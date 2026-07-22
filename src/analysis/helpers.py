@@ -130,7 +130,13 @@ def extract_title_features(title: str) -> Dict[str, Any]:
     title = title or ""
     lowered = title.lower().strip()
     words = title.split()
-    first_word = words[0].lower().rstrip("'?s") if words else ""
+    # Normalise the first word for question detection: strip surrounding
+    # punctuation/quotes and a trailing "'s" contraction, but NOT a bare
+    # trailing "s". A char-set rstrip("'?s") turned "is"->"i", "does"->"doe"
+    # (missing real questions) and "dos"/"cans"->"do"/"can" (false questions).
+    first_word = re.sub(r"^\W+|\W+$", "", words[0].lower()) if words else ""
+    if first_word.endswith("'s"):
+        first_word = first_word[:-2]
 
     return {
         "char_length": len(title),
@@ -212,12 +218,29 @@ def features_from_arctic(post: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def clean_subreddit_name(name: str) -> str:
-    """Strip r/ prefixes and whitespace from a subreddit name."""
-    return (name or "").replace("/r/", "").replace("r/", "").strip().lstrip("/")
+    """Strip r/ prefixes and whitespace from a subreddit name (case-insensitive).
+
+    Handles ``r/``, ``/r/``, and an uppercase ``R/`` prefix; a plain
+    ``.replace("r/", "")`` left ``R/AskReddit`` untouched, which then failed
+    the ``reddit.subreddit()`` lookup.
+    """
+    cleaned = re.sub(r"^\s*/?(?:r/)+", "", name or "", flags=re.IGNORECASE)
+    return cleaned.strip().lstrip("/")
 
 
 def safe_mean(values: List[float]) -> float:
     return round(sum(values) / len(values), 2) if values else 0.0
+
+
+def median(values: List[float]) -> float:
+    """True median: for an even-length sample, the average of the two central
+    values — not the upper-middle element that ``sorted(x)[len(x)//2]`` returns."""
+    s = sorted(values)
+    n = len(s)
+    if not n:
+        return 0.0
+    mid = n // 2
+    return s[mid] if n % 2 else (s[mid - 1] + s[mid]) / 2
 
 
 # --- Clickbait detection -------------------------------------------------

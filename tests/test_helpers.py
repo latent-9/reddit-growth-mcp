@@ -13,6 +13,7 @@ from src.analysis.helpers import (
     features_from_arctic,
     is_recurring_thread,
     leading_bracket_tag,
+    median,
     metric_value,
     percentile,
     rank_percentile,
@@ -51,6 +52,11 @@ def test_clean_subreddit_name():
     assert clean_subreddit_name("r/Python") == "Python"
     assert clean_subreddit_name("/r/aiArt ") == "aiArt"
     assert clean_subreddit_name("MachineLearning") == "MachineLearning"
+    # Case-insensitive: an uppercase R/ prefix must be stripped too, or the
+    # downstream reddit.subreddit() lookup fails on "R/AskReddit".
+    assert clean_subreddit_name("R/AskReddit") == "AskReddit"
+    assert clean_subreddit_name("/R/LocalLLaMA") == "LocalLLaMA"
+    assert clean_subreddit_name("") == ""
 
 
 def test_classify_removal():
@@ -81,6 +87,19 @@ def test_extract_title_features():
 
     show = extract_title_features("I made a tiny AI art tool")
     assert show["is_showcase"] is True
+
+
+def test_question_detection_edge_cases():
+    # Real questions with no trailing "?" that a char-set rstrip("'?s") broke:
+    # "is"->"i", "does"->"doe" both fell out of the starter set.
+    assert extract_title_features("Is Rust worth learning in 2026").get("is_question") is True
+    assert extract_title_features("Does anyone still use vim").get("is_question") is True
+    # A leading "'s" contraction is stripped so the stem still matches.
+    assert extract_title_features("What's the best local model").get("is_question") is True
+    # Not questions: plural nouns whose stem is a starter must NOT false-positive
+    # ("dos"->"do", "cans"->"can" under the old rstrip).
+    assert extract_title_features("Dos and don'ts of prompting").get("is_question") is False
+    assert extract_title_features("Cans of compressed air for cleaning").get("is_question") is False
 
 
 def test_extract_time_features():
@@ -167,6 +186,18 @@ def test_percentile():
     assert percentile(vals, 0) == 0.0
     assert percentile(vals, 100) == 100.0
     assert percentile([], 50) == 0.0
+
+
+def test_median():
+    # Even length: average the two central values (not the upper-middle element
+    # that sorted(x)[len(x)//2] returns — that would give 3 here, not 2.5).
+    assert median([1, 2, 3, 4]) == 2.5
+    assert median([4, 1, 3, 2]) == 2.5  # unsorted input
+    # Odd length: the true middle element.
+    assert median([1, 2, 3]) == 2
+    assert median([5]) == 5
+    # Empty is a safe zero, not an IndexError.
+    assert median([]) == 0.0
 
 
 def test_rank_percentile():

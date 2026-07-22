@@ -16,7 +16,7 @@ from .constants import (
     SAFETY_SAFE_MAX,
     VIRAL_PERCENTILE,
 )
-from .helpers import clean_subreddit_name, features_from_arctic, percentile, safe_mean
+from .helpers import clean_subreddit_name, features_from_arctic, median, percentile, safe_mean
 
 
 def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
@@ -40,9 +40,9 @@ def _profile_subreddit(name: str, window: str, sample: int) -> Dict[str, Any]:
     low_confidence = filtered_ratio > LOW_CONFIDENCE_FILTERED_RATIO or considered < 10
 
     live_scores = [r["score"] for r in live]
-    median_score = sorted(live_scores)[len(live_scores) // 2] if live_scores else 0
-    live_comments = sorted(r["num_comments"] for r in live)
-    median_comments = live_comments[len(live_comments) // 2] if live_comments else 0
+    median_score = median(live_scores)
+    _mc = median([r["num_comments"] for r in live])
+    median_comments = int(_mc) if _mc == int(_mc) else _mc  # keep whole counts integer-looking
     # Opportunity: reach of a typical surviving post, discounted by removal risk.
     opportunity = round(median_score * (1 - removal_rate), 1)
     # Viral potential: the upside (90th-percentile reach) a strong post can hit

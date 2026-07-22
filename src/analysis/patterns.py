@@ -56,7 +56,13 @@ def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str
         posts = arctic.fetch_many_posts(
             name, after=_ARCHIVE_WINDOW.get(time_filter, "60d"), before="2d", target=max(limit, 100)
         )
-    rows = [features_from_arctic(p) for p in posts if not p.get("stickied") and p.get("removed_by_category") is None]
+    # Require a real timestamp: a post missing/zero created_utc has no hour_utc
+    # feature, which the time-bucket step downstream indexes directly.
+    rows = [
+        features_from_arctic(p)
+        for p in posts
+        if not p.get("stickied") and p.get("removed_by_category") is None and p.get("created_utc")
+    ]
     return [r for r in rows if not r.get("recurring")]  # drop megathreads/AMAs
 
 

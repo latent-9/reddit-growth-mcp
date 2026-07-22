@@ -136,10 +136,13 @@ def fetch_many_posts(
         for p in fresh:
             seen.add(p["id"])
         out.extend(fresh)
-        oldest = min((p.get("created_utc", 0) or 0) for p in batch)
-        if not oldest or len(batch) < page:
+        # Advance the cursor to the oldest *timestamped* post. Ignoring zero/
+        # missing created_utc matters: a single timeless post would drag min()
+        # to 0 and trip the `not oldest` guard, truncating pagination early.
+        times = [t for t in (p.get("created_utc", 0) or 0 for p in batch) if t > 0]
+        if not times or len(batch) < page:
             break
-        cursor = int(oldest)  # epoch seconds; next page is strictly older
+        cursor = int(min(times))  # epoch seconds; next page is strictly older
         if len(out) < target:
             time.sleep(delay)
     return out[:target]

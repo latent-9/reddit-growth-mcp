@@ -14,7 +14,7 @@ import praw
 from prawcore import Forbidden, NotFound, ResponseException, TooManyRequests
 
 from . import arctic
-from .helpers import clean_subreddit_name, features_from_arctic, safe_mean
+from .helpers import clean_subreddit_name, features_from_arctic, median, safe_mean
 
 
 def _velocity_tier(posts_per_day: float) -> str:
@@ -54,16 +54,16 @@ def estimate_activity_archive(
 
     rows = [features_from_arctic(p) for p in posts]
     live = [r for r in rows if r["removal_status"] == "live"]
-    comments = sorted(r["num_comments"] for r in live) or [0]
-    scores = sorted(r["score"] for r in live) or [0]
+    med_comments = median([r["num_comments"] for r in live])
+    med_score = median([r["score"] for r in live])
 
     return {
         "subreddit": name,
         "source": "archive",
         "signals": {
             "posts_per_day_est": posts_per_day,
-            "median_comments_per_post": comments[len(comments) // 2],
-            "median_score": scores[len(scores) // 2],
+            "median_comments_per_post": int(med_comments) if med_comments == int(med_comments) else med_comments,
+            "median_score": int(med_score) if med_score == int(med_score) else med_score,
             "sample": len(posts),
             "span_days": round(span_days, 1),
         },

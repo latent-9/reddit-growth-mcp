@@ -1,10 +1,12 @@
 """Unit tests for the robust pattern-aggregation helpers (no network)."""
 
+from src.analysis import patterns
 from src.analysis.patterns import (
     _bool_lift,
     _clickbait_effect,
     _group_stats,
     _median,
+    _rows_from_archive,
     analyze_post_patterns,
 )
 
@@ -41,6 +43,22 @@ def test_invalid_time_filter_is_normalized_not_raised():
     out = analyze_post_patterns("x", reddit=_FakeReddit(rec), source="reddit", time_filter="30d")
     assert rec["time_filter"] == "month"  # normalized, praw never sees "30d"
     assert "error" in out  # empty listing → structured error, no crash
+
+
+def test_rows_from_archive_drops_timeless_posts(monkeypatch):
+    # An archive post with a missing/zero created_utc gets no hour_utc feature,
+    # which the downstream time-bucket step indexes directly (KeyError otherwise).
+    # Such posts must be filtered out here, and every surviving row must carry
+    # the time features.
+    posts = [
+        {"id": "a", "title": "A real post", "score": 10, "num_comments": 2, "created_utc": 1_700_000_000},
+        {"id": "b", "title": "Missing timestamp", "score": 5, "num_comments": 1},  # no created_utc
+        {"id": "c", "title": "Zero timestamp", "score": 5, "num_comments": 1, "created_utc": 0},
+    ]
+    monkeypatch.setattr(patterns.arctic, "fetch_many_posts", lambda *a, **k: posts)
+    rows = _rows_from_archive("x", "week", 100)
+    assert len(rows) == 1  # only the timestamped post survives
+    assert all("hour_utc" in r for r in rows)
 
 
 def _rows(pairs, key="media_type"):
