@@ -83,3 +83,12 @@ def test_rank_by_insight(monkeypatch):
 
 def test_empty_input():
     assert "error" in compare.compare_subreddits([])
+
+
+def test_duplicate_subs_are_deduped(stub_arctic):
+    # Passing the same sub several times (or with an r/ prefix) must profile it once.
+    posts = [_post(f"p{i}", (i + 1) * 10, comments=i) for i in range(10)]
+    stub_arctic(posts)
+    out = compare.compare_subreddits(["mcp", "r/mcp", "mcp"], sample=50)
+    assert len(out["ranked"]) == 1
+    assert out["ranked"][0]["subreddit"] == "mcp"

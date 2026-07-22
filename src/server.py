@@ -128,7 +128,7 @@ def analyze_subreddit(
 ) -> Dict[str, Any]:
     # Falls back to a credential-free velocity estimate from the archive.
     if reddit is None:
-        return estimate_activity_archive(subreddit_name, ctx=ctx)
+        return estimate_activity_archive(subreddit_name, sample=sample_size, ctx=ctx)
     return estimate_subreddit_traffic(subreddit_name, reddit, sample_size, ctx)
 
 

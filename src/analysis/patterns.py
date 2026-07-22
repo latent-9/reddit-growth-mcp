@@ -34,6 +34,9 @@ from .helpers import (
 _ARCHIVE_WINDOW = {"day": "7d", "week": "21d", "month": "60d", "year": "365d", "all": "365d"}
 _WINDOW_DAYS = {"day": 7, "week": 21, "month": 60, "year": 365, "all": 365}
 _VALID_METRICS = {"score", "comments", "discussion", "quality"}
+# praw's .top() rejects anything outside this set with a ValueError; a caller may
+# pass a window-style string ("30d") by analogy with the other tools, so validate.
+_VALID_TIME_FILTERS = {"all", "day", "hour", "month", "week", "year"}
 
 
 def _rows_from_archive(name: str, time_filter: str, limit: int) -> List[Dict[str, Any]]:
@@ -225,6 +228,8 @@ def analyze_post_patterns(
     """
     if metric not in _VALID_METRICS:
         metric = "score"
+    if time_filter not in _VALID_TIME_FILTERS:
+        time_filter = "month"
     name = clean_subreddit_name(subreddit_name)
     use_archive = source == "archive" or (source == "auto" and reddit is None)
 

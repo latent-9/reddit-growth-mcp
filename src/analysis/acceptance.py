@@ -232,8 +232,13 @@ def analyze_acceptance(
     contrast = {
         "flair_usage": {"live": _share(live, "flair"), "removed": _share(mod_removed, "flair")},
         "text_posts": {
-            "live": _share([r for r in live if r["media_type"] == "text"], "id") if live else 0.0,
-            "removed": _share([r for r in mod_removed if r["media_type"] == "text"], "id") if mod_removed else 0.0,
+            # Fraction of live/removed posts that are self-text (not "do they have an id").
+            "live": round(sum(1 for r in live if r["media_type"] == "text") / len(live), 2) if live else 0.0,
+            "removed": (
+                round(sum(1 for r in mod_removed if r["media_type"] == "text") / len(mod_removed), 2)
+                if mod_removed
+                else 0.0
+            ),
         },
         "avg_title_length": {
             "live": safe_mean([r["char_length"] for r in live]),

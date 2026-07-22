@@ -1,6 +1,46 @@
 """Unit tests for the robust pattern-aggregation helpers (no network)."""
 
-from src.analysis.patterns import _bool_lift, _clickbait_effect, _group_stats, _median
+from src.analysis.patterns import (
+    _bool_lift,
+    _clickbait_effect,
+    _group_stats,
+    _median,
+    analyze_post_patterns,
+)
+
+
+class _FakeSub:
+    """Records the time_filter praw would receive; returns an empty listing."""
+
+    def __init__(self, rec):
+        self.rec = rec
+
+    def top(self, time_filter=None, limit=None):
+        self.rec["time_filter"] = time_filter
+        return []
+
+    def hot(self, limit=None):
+        return []
+
+    def new(self, limit=None):
+        return []
+
+
+class _FakeReddit:
+    def __init__(self, rec):
+        self.rec = rec
+
+    def subreddit(self, name):
+        return _FakeSub(self.rec)
+
+
+def test_invalid_time_filter_is_normalized_not_raised():
+    # A caller passing a window-style string ("30d") must not reach praw's .top()
+    # (which raises ValueError) — it's normalized to the default first.
+    rec = {}
+    out = analyze_post_patterns("x", reddit=_FakeReddit(rec), source="reddit", time_filter="30d")
+    assert rec["time_filter"] == "month"  # normalized, praw never sees "30d"
+    assert "error" in out  # empty listing → structured error, no crash
 
 
 def _rows(pairs, key="media_type"):

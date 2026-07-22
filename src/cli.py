@@ -521,6 +521,7 @@ live checks. All figures are estimates from a sample, not guarantees.
 """
 
 _TIME_CHOICES = ["day", "week", "month", "year", "all"]
+_TYPE_CHOICES = ["text", "image", "video", "link"]
 _SUB_HELP = "Subreddit name, without the r/ prefix"
 _SUBS_HELP = "One or more subreddit names (without r/), space-separated"
 _TZ_HELP = "Local UTC offset in hours to also show posting times (e.g. 7 for WIB)"
@@ -591,7 +592,13 @@ def main(argv=None) -> int:
     sd.add_argument("subreddit", help=_SUB_HELP)
     sd.add_argument("--title", required=True, help="Draft post title")
     sd.add_argument("--body", default="", help="Draft self-text body (optional)")
-    sd.add_argument("--type", default="text", dest="post_type", help="text | image | video | link (default: text)")
+    sd.add_argument(
+        "--type",
+        default="text",
+        dest="post_type",
+        choices=_TYPE_CHOICES,
+        help="text | image | video | link (default: text)",
+    )
     sd.add_argument("--flair", default=None, help="Intended flair (optional)")
     sd.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Pattern window (default: month)")
     sd.add_argument("--tz", type=float, default=0.0, help=_TZ_HELP)
@@ -599,7 +606,13 @@ def main(argv=None) -> int:
     sf = sub.add_parser("fit", parents=[common], help="Score one draft across subs, ranked by size-fair fit")
     sf.add_argument("subreddits", nargs="+", help=_SUBS_HELP)
     sf.add_argument("--title", required=True, help="Draft post title")
-    sf.add_argument("--type", default="text", dest="post_type", help="text | image | video | link (default: text)")
+    sf.add_argument(
+        "--type",
+        default="text",
+        dest="post_type",
+        choices=_TYPE_CHOICES,
+        help="text | image | video | link (default: text)",
+    )
     sf.add_argument("--flair", default=None, help="Intended flair (optional)")
     sf.add_argument("--time", default="month", choices=_TIME_CHOICES, help="Pattern window (default: month)")
 

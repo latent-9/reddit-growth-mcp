@@ -98,6 +98,7 @@ def compare_subreddits(
     if isinstance(subreddits, str):
         subreddits = [subreddits]
     names = [clean_subreddit_name(s) for s in subreddits if s and s.strip()]
+    names = list(dict.fromkeys(names))  # de-dupe, keep first-seen order
     if not names:
         return {"error": "Provide at least one subreddit name"}
 
