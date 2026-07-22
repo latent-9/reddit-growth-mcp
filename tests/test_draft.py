@@ -89,6 +89,26 @@ def test_small_sub_top_percentile_not_labeled_viral():
     assert res["performance_band"] not in {"viral", "strong"}
 
 
+def test_moderate_reach_caps_below_viral():
+    # A post projecting ~40 upvotes tops this sub's distribution but should read
+    # "strong", not "viral" — viral is reserved for higher absolute reach.
+    mod = {
+        "score_stats": {"mean": 30, "median": 10, "max": 100},
+        "score_percentiles": {25: 5, 50: 10, 75: 25, 90: 40, 95: 60},
+        "score_by_media_type": [{"value": "image", "median": 35, "mean": 45, "count": 12}],
+    }
+    res = _predict_performance("a solid showcase title", "image", None, patterns=mod)
+    assert 25 <= res["projected_score"] < 80
+    assert res["performance_band"] != "viral"
+
+
+def test_predict_handles_empty_title():
+    # An empty title must not crash — it just contributes no title-derived signals.
+    res = _predict_performance("", "image", None, patterns=PATTERNS)
+    assert "performance_score" in res
+    assert res["performance_band"] in {"weak", "average", "strong", "viral"}
+
+
 def test_compliance_flags_missing_required_flair():
     acceptance = {"post_requirements": {"flair_required": True}, "account_gates": []}
     out = _check_compliance("title", "", "text", None, acceptance)
@@ -122,3 +142,11 @@ def test_evaluate_draft_across_ranks_by_fit_not_reach(monkeypatch):
     out = evaluate_draft_across(["Small", "Big"], "a title")
     assert out["best_fit"] == "Small"  # size-fair fit prefers the small sub
     assert out["most_reach"] == "Big"  # raw reach prefers the big sub
+
+
+def test_evaluate_draft_across_empty_is_safe():
+    # No subreddits given: must not crash, just return an empty result.
+    out = evaluate_draft_across([], "a title")
+    assert out["ranked"] == []
+    assert out["best_fit"] is None
+    assert out["most_reach"] is None
