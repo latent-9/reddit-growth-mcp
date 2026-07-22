@@ -385,7 +385,13 @@ def _plan_markdown(plan: dict, tz: float) -> str:
     rc = plan.get("recipe")
     if rc:
         out += ["", "## What to post (viral recipe)", ""]
-        out.append(f"- Format: {rc['media_type']['value']}")
+        _style = _content_style(
+            rc["media_type"]["value"],
+            rc["flair"]["value"],
+            rc.get("keywords"),
+            (rc.get("title_tag") or {}).get("common"),
+        )
+        out.append(f"- Format: {rc['media_type']['value']} — {_style}")
         if rc["flair"]["value"]:
             out.append(f"- Flair: {rc['flair']['value']}")
         tag = rc.get("title_tag", {})
@@ -401,6 +407,29 @@ def _plan_markdown(plan: dict, tz: float) -> str:
         out.append("- Days: " + ", ".join(x["day"] for x in plan["best_posting_days"]))
     out += ["", f"_{plan.get('disclaimer', '')}_"]
     return "\n".join(out)
+
+
+def _content_style(media: str, flair, keywords, tags) -> str:
+    """A human-readable hint for what kind of post to make (meme, news, …),
+    inferred from the winning flair, keywords, and title tags."""
+    blob = " ".join([str(flair or "")] + list(keywords or []) + list(tags or [])).lower()
+    if any(w in blob for w in ("funny", "meme", "humor", "humour", "shitpost", "lol")):
+        return "memes / humor"
+    if any(w in blob for w in ("news", "launch", "announce", "leak", "report", "breaking", "update")):
+        return "news / announcements"
+    if any(w in blob for w in ("oc", "showcase", "project", "built", "made", "release", "guide", "tutorial")):
+        return "showcases / projects"
+    if any(w in blob for w in ("question", "help", "how")):
+        return "questions / help"
+    if any(w in blob for w in ("discussion", "opinion", "thoughts")):
+        return "discussion posts"
+    return {
+        "image": "images (screenshots / visuals)",
+        "video": "video clips",
+        "gallery": "image galleries",
+        "link": "linked articles / pages",
+        "text": "text write-ups",
+    }.get(media, media)
 
 
 def _run_plan(args, reddit) -> None:
@@ -437,7 +466,13 @@ def _run_plan(args, reddit) -> None:
     rc = plan.get("recipe")
     if rc:
         _hr("What to post (viral recipe)")
-        print(f"  Format : {rc['media_type']['value']}")
+        _style = _content_style(
+            rc["media_type"]["value"],
+            rc["flair"]["value"],
+            rc.get("keywords"),
+            (rc.get("title_tag") or {}).get("common"),
+        )
+        print(f"  Format : {rc['media_type']['value']}  →  {_style}")
         if rc["flair"]["value"]:
             print(f"  Flair  : {rc['flair']['value']}")
         tag = rc.get("title_tag", {})
