@@ -24,7 +24,7 @@ Cursor, and other MCP clients) and as a standalone command-line tool.
 > heuristics here encode what actually gets upvoted and what gets removed, not guesswork.
 
 <p align="center">
-  <img src="assets/proof-claudeai.png" alt="Top 1% Poster in r/ClaudeAI (Legendary)" width="600" />
+  <img src="assets/proof-claudeai.png" alt="Top 1% Poster in r/ClaudeAI (Legendary)" width="820" />
 </p>
 
 ## Quick start
