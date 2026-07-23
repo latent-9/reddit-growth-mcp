@@ -1,19 +1,31 @@
 """Reddit Growth MCP resources — server info endpoint."""
 
-from typing import Any, Dict
+import json
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _pkg_version
 
 import praw
+
+try:
+    # Report the real installed version so server-info never drifts from
+    # pyproject (dist name = [project].name). The Glama/Docker/pipx deploy has
+    # the package installed, so this resolves to the true version.
+    _VERSION = _pkg_version("reddit-growth-mcp")
+except PackageNotFoundError:
+    _VERSION = "0.2.1"  # fallback for source-tree runs (e.g. pytest) with no install
 
 
 def register_resources(mcp, reddit: praw.Reddit) -> None:
     """Register the server-info resource with the MCP server."""
 
-    @mcp.resource("reddit://server-info")
-    def get_server_info() -> Dict[str, Any]:
+    @mcp.resource("reddit://server-info", mime_type="application/json")
+    def get_server_info() -> str:
         """Server capabilities and usage overview."""
-        return {
+        # FastMCP resources must return str/bytes, not a dict (it raises
+        # otherwise), so serialize; mime_type advertises it as JSON.
+        return json.dumps({
             "name": "Reddit Growth MCP",
-            "version": "0.2.0",
+            "version": _VERSION,
             "description": (
                 "Analyze subreddits and post performance: find high-traffic "
                 "communities, learn each sub's acceptance rules, and evaluate "
@@ -47,4 +59,4 @@ def register_resources(mcp, reddit: praw.Reddit) -> None:
                 "AutoMod config is private; account gates are inferred from rules.",
             ],
             "authentication": {"type": "Application-only OAuth", "scope": "Read-only"},
-        }
+        })
