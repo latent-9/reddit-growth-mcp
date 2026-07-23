@@ -1,47 +1,31 @@
-<p align="center">
-  <img src="assets/banner.png" alt="Reddit Growth MCP" width="480" />
-</p>
-
 <h1 align="center">Reddit Growth MCP</h1>
 
-[![PyPI](https://img.shields.io/pypi/v/reddit-growth-mcp)](https://pypi.org/project/reddit-growth-mcp/)
-[![CI](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
-**Analyze any subreddit and score your post before you publish — no Reddit API
-key required.**
-
-Reddit Growth MCP finds where to post, reads each community's viral recipe
-(format, flair, timing, keywords), and predicts how a draft will perform — all
-from a public historical archive, so the whole core workflow runs with no account
-or API key. It works as an MCP server (for Claude, Cursor, and other MCP clients)
-and as a standalone command-line tool.
-
 <p align="center">
-  <img src="assets/demo-plan.png" alt="reddit-growth in action" width="760" />
+  <strong>Find where to post, learn each subreddit's viral recipe, and score your draft before you publish — no Reddit API key required.</strong>
 </p>
 
-One command turns a list of subreddits into a plan — where to post, what to
-post, and when:
+<p align="center">
+  <a href="https://pypi.org/project/reddit-growth-mcp/"><img src="https://img.shields.io/pypi/v/reddit-growth-mcp" alt="PyPI" /></a>
+  <a href="https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml"><img src="https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+</p>
 
-```text
-$ reddit-growth plan singularity LocalLLaMA mcp --tz 7
+<p align="center">
+  <img src="assets/demo-plan.png" alt="reddit-growth plan — where to post, what to post, and when" width="820" />
+</p>
 
-GROWTH PLAN
-Target: r/singularity
-  growth 222.9 · viral 629.1 · 48 posts/day · 23 comments · 12% removed (safe)
-  discussion depth (insight): medium (30% substantive)
+Reddit Growth MCP turns a list of subreddits into a plan — **where** to post,
+**what** to post, and **when** — by reading each community's format, flair,
+timing, and keyword recipe from a public historical archive. The whole core
+workflow runs with no account or API key. It works as an MCP server (for Claude,
+Cursor, and other MCP clients) and as a standalone command-line tool.
 
-Also worth posting to (safe, tailor per sub)
-  r/LocalLLaMA   growth 64.3 · 12% removed (safe)
+> **Built by a [Top 1% Poster in r/ClaudeAI](https://www.reddit.com/user/Oliveaniss_/)** — the
+> heuristics here encode what actually gets upvoted and what gets removed, not guesswork.
 
-What to post (viral recipe)
-  Format : image      Flair : AI      Length : ~97 chars, no clickbait
-  Words  : open, kimi, deepseek
-
-When to post
-  08:00 UTC = 15:00 local / 15:00 UTC = 22:00 local   ·   Days: Friday, Saturday
-```
+<p align="center">
+  <img src="assets/proof-claudeai.png" alt="Top 1% Poster in r/ClaudeAI (Legendary)" width="600" />
+</p>
 
 ## Quick start
 
@@ -95,11 +79,22 @@ a built-in guide.
 - What actually performs here: which format, title style, timing, and flair?
 - Given a specific draft, how is it likely to do, and how do I improve it?
 
-## Demo
+## See it work
 
-`compare` ranks candidate subreddits by growth, viral ceiling, and removal risk:
+`compare` ranks candidate subreddits by growth, viral ceiling, discussion, and
+removal risk — so you post where you'll be seen and skip communities that remove
+most submissions (note r/ClaudeAI below: 96% removed, strict):
 
 ![compare mode](assets/demo-compare.png)
+
+`patterns` reads one community's viral recipe — the media types, hours, days,
+flairs, and keywords that actually perform, ranked by median so a single lucky
+post can't crown a category:
+
+![patterns mode](assets/demo-patterns.png)
+
+Figures are live estimates from a sample and shift over time — run the commands
+yourself for current numbers.
 
 ## Tools
 
@@ -181,50 +176,6 @@ Time-based commands (`patterns`, `plan`, `draft`, `fit`, `report`) accept
 - `discussion`: comments per upvote, a proxy for genuine engagement rather than
   drive-by upvotes.
 - `quality`: upvotes damped by a clickbait penalty.
-
-## Example analysis
-
-Ranking a set of AI/dev communities for account growth (credential-free):
-
-```
-$ reddit-growth compare singularity LocalLLaMA unixporn linux mcp --window 30d
-
-SUBREDDIT COMPARISON  (ranked by growth)
-subreddit             growth   viral  posts/day  comments  removal    safety  conf
-  r/singularity         222.9   629.1       48.7        22     12%      safe  ok
-  r/LocalLLaMA           64.3   199.8       80.2        19     12%      safe  ok
-  r/unixporn             53.4   120.0       38.5         2     28%  moderate  ok
-  r/linux                12.8    42.6       60.9        10     55%    strict  ok
-  r/mcp                   1.5     2.8       45.6         1     30%  moderate  ok
-```
-
-Reading it: r/singularity and r/LocalLLaMA are safe (low removal) and active,
-with high viral ceilings and real discussion; r/linux is active but strict
-(55% of posts removed). Turning that into a plan:
-
-```
-$ reddit-growth plan singularity LocalLLaMA unixporn mcp --tz 7
-
-GROWTH PLAN
-Target: r/singularity
-  growth 222.9 · viral 629.1 · 48.7 posts/day · 22 comments · 12% removed (safe)
-
-Also worth posting to (safe, tailor per sub)
-  r/LocalLLaMA   growth 64.3 · 12% removed (safe)
-  r/unixporn     growth 53.4 · 28% removed (moderate)
-
-What to post (viral recipe)
-  Format : link
-  Flair  : AI
-  Length : ~97.5 chars, no clickbait
-
-When to post
-  08:00 UTC = 15:00 local / 15:00 UTC = 22:00 local
-  Days: Saturday, Friday
-```
-
-Figures are estimates from a sample and will shift over time; run it live for
-current numbers.
 
 ## Use as an MCP server
 
