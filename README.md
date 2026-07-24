@@ -12,7 +12,15 @@
 </p>
 
 <p align="center">
-  <img src="assets/demo-plan.png" alt="reddit-growth plan — where to post, what to post, and when" width="820" />
+  <img src="assets/demo.gif" alt="reddit-growth in action — plan where to post, score a draft, and compare subreddits" width="820" />
+</p>
+
+<p align="center">
+  <em>One command each: <code>plan</code> where to post, <code>draft</code> to score a post before you publish, and <code>compare</code> to rank subreddits by removal risk.</em>
+</p>
+
+<p align="center">
+  <a href="assets/reddit-growth-demo.mp4"><strong>▶ Watch the full-quality 30s MP4</strong></a>
 </p>
 
 Reddit Growth MCP turns a list of subreddits into a plan — **where** to post,
