@@ -139,7 +139,7 @@ runs archive-only and flags its confidence.
 ## Reddit credentials (optional)
 
 Everything above works with no account. Credentials only unlock the
-credential-only tools (raw data access, `find_target_subreddits`) and the
+credential-only tools (raw data access, `find_target_subreddits_tool`) and the
 accurate live-removal check. Create a "script" app at
 https://www.reddit.com/prefs/apps, then:
 
@@ -147,7 +147,7 @@ https://www.reddit.com/prefs/apps, then:
 cp .env.sample .env
 # REDDIT_CLIENT_ID=...
 # REDDIT_CLIENT_SECRET=...
-# REDDIT_USER_AGENT=reddit-growth-mcp/0.2 by u/your_username
+# REDDIT_USER_AGENT=reddit-growth-mcp/0.2.1 by u/your_username
 ```
 
 ## Command-line usage
