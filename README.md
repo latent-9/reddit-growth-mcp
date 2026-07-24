@@ -8,6 +8,7 @@
   <a href="https://pypi.org/project/reddit-growth-mcp/"><img src="https://img.shields.io/pypi/v/reddit-growth-mcp" alt="PyPI" /></a>
   <a href="https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml"><img src="https://github.com/latent-9/reddit-growth-mcp/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" /></a>
+  <a href="https://glama.ai/mcp/servers/latent-9/reddit-growth-mcp"><img src="https://glama.ai/mcp/servers/latent-9/reddit-growth-mcp/badges/score.svg" alt="Glama quality score" /></a>
 </p>
 
 <p align="center">
